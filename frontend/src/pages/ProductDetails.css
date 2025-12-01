@@ -1,0 +1,270 @@
+.product-details {
+  padding: 2rem 0;
+}
+
+.product-details-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.product-image img {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.product-info h1 {
+  margin-bottom: 1rem;
+}
+
+.product-info .category {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.product-info .product-code {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+  font-family: monospace;
+}
+
+.product-info .price {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #FF6B35;
+  margin-bottom: 1rem;
+}
+
+.product-info .description {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.product-info .stock {
+  margin-bottom: 1rem;
+  color: #666;
+}
+
+.quantity-selector {
+  margin-bottom: 1rem;
+}
+
+.quantity-selector label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.quantity-selector input {
+  width: 100px;
+}
+
+.weight-selector {
+  margin-bottom: 1rem;
+}
+
+.weight-selector label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.weight-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.weight-input {
+  width: 120px !important;
+  text-align: center;
+  font-size: 1.1rem;
+  padding: 0.75rem;
+}
+
+.weight-btn {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--primary-color);
+  background: white;
+  color: var(--primary-color);
+  font-size: 1.5rem;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.weight-btn:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.weight-btn:active {
+  transform: scale(0.95);
+}
+
+.weight-note {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+.product-unavailable {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.product-unavailable h2 {
+  color: #f44336;
+  margin-bottom: 1rem;
+}
+
+.unavailable-message {
+  background: #ffebee;
+  border: 2px solid #f44336;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.unavailable-text {
+  color: #c62828;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.stock-message {
+  color: #c62828;
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
+.product-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #3498db;
+  color: #3498db;
+}
+
+.btn-outline:hover {
+  background: #3498db;
+  color: white;
+}
+
+/* Substitutions Section */
+.substitutions-section {
+  margin-top: 3rem;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.substitutions-section h2 {
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.substitutions-intro {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+.substitutions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.substitution-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.substitution-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.substitution-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.substitution-info {
+  padding: 1rem;
+}
+
+.substitution-info h3 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+
+.substitution-info h3:hover {
+  color: #3498db;
+}
+
+.substitution-price {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #27ae60;
+  margin: 0.5rem 0;
+}
+
+.price-diff {
+  font-size: 0.85rem;
+  margin: 0.25rem 0;
+}
+
+.price-diff.cheaper {
+  color: #28a745;
+}
+
+.price-diff.more-expensive {
+  color: #ffc107;
+}
+
+.substitution-reason {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin: 0.5rem 0;
+  line-height: 1.4;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .product-details-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .substitutions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -1,0 +1,127 @@
+.product-list {
+  padding: 2rem 0;
+}
+
+.category-filter {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.product-filters {
+  margin-bottom: 2rem;
+}
+
+.search-box {
+  margin-bottom: 1rem;
+}
+
+.search-box .input {
+  max-width: 500px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+}
+
+.search-box .input:focus {
+  border-color: #FF6B35;
+}
+
+.category-filter {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.category-filter button {
+  padding: 0.5rem 1.5rem;
+  border: 2px solid #FF6B35;
+  background: white;
+  color: #FF6B35;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.category-filter button:hover {
+  background: #fff5f0;
+}
+
+.category-filter button.active {
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+  color: white;
+  box-shadow: 0 4px 6px rgba(255, 107, 53, 0.3);
+}
+
+.product-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.product-card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.product-card h3 {
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.product-card .product-code {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+  font-family: monospace;
+}
+
+.product-card .price {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #FF6B35;
+  margin-bottom: 0.5rem;
+}
+
+.no-results {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.loading-message {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.no-products-message {
+  text-align: center;
+  padding: 3rem;
+  background: #fff3e0;
+  border: 2px solid #ff9800;
+  border-radius: 8px;
+  color: #e65100;
+  font-size: 1.1rem;
+  margin: 2rem 0;
+}
+
+.no-products-message p {
+  margin: 0.5rem 0;
+}
+
+.product-card .stock {
+  color: #666;
+  margin-bottom: 1rem;
+}
+

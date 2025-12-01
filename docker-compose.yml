@@ -1,0 +1,236 @@
+version: '3.8'
+
+services:
+  # Databases
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: grocerystore_auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - grocerystore-network
+
+  postgres-catalog:
+    image: postgres:15-alpine
+    container_name: postgres-catalog
+    environment:
+      POSTGRES_DB: grocerystore_catalog
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-catalog-data:/var/lib/postgresql/data
+    networks:
+      - grocerystore-network
+
+  postgres-cart:
+    image: postgres:15-alpine
+    container_name: postgres-cart
+    environment:
+      POSTGRES_DB: grocerystore_cart
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-cart-data:/var/lib/postgresql/data
+    networks:
+      - grocerystore-network
+
+  postgres-order:
+    image: postgres:15-alpine
+    container_name: postgres-order
+    environment:
+      POSTGRES_DB: grocerystore_order
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-order-data:/var/lib/postgresql/data
+    networks:
+      - grocerystore-network
+
+  postgres-payment:
+    image: postgres:15-alpine
+    container_name: postgres-payment
+    environment:
+      POSTGRES_DB: grocerystore_payment
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres-payment-data:/var/lib/postgresql/data
+    networks:
+      - grocerystore-network
+
+  # Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - grocerystore-network
+
+  # Backend Services
+  auth-service:
+    build: ./backend/auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres-auth
+      DB_PORT: 5432
+      DB_NAME: grocerystore_auth
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      JWT_SECRET: your-256-bit-secret-key-change-in-production-minimum-32-characters
+    depends_on:
+      - postgres-auth
+      - rabbitmq
+    networks:
+      - grocerystore-network
+
+  catalog-service:
+    build: ./backend/catalog-service
+    container_name: catalog-service
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: postgres-catalog
+      DB_PORT: 5432
+      DB_NAME: grocerystore_catalog
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      - postgres-catalog
+      - rabbitmq
+    networks:
+      - grocerystore-network
+
+  cart-service:
+    build: ./backend/cart-service
+    container_name: cart-service
+    ports:
+      - "8083:8083"
+    environment:
+      DB_HOST: postgres-cart
+      DB_PORT: 5432
+      DB_NAME: grocerystore_cart
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      - postgres-cart
+      - rabbitmq
+    networks:
+      - grocerystore-network
+
+  order-service:
+    build: ./backend/order-service
+    container_name: order-service
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: postgres-order
+      DB_PORT: 5432
+      DB_NAME: grocerystore_order
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      - postgres-order
+      - rabbitmq
+    networks:
+      - grocerystore-network
+
+  payment-service:
+    build: ./backend/payment-service
+    container_name: payment-service
+    ports:
+      - "8085:8085"
+    environment:
+      DB_HOST: postgres-payment
+      DB_PORT: 5432
+      DB_NAME: grocerystore_payment
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_your_stripe_secret_key}
+      STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY:-pk_test_your_stripe_public_key}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_your_webhook_secret}
+    depends_on:
+      - postgres-payment
+      - rabbitmq
+    networks:
+      - grocerystore-network
+
+  api-gateway:
+    build: ./backend/api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - catalog-service
+      - cart-service
+      - order-service
+      - payment-service
+    networks:
+      - grocerystore-network
+
+  # Frontend
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - grocerystore-network
+
+volumes:
+  postgres-auth-data:
+  postgres-catalog-data:
+  postgres-cart-data:
+  postgres-order-data:
+  postgres-payment-data:
+  rabbitmq-data:
+
+networks:
+  grocerystore-network:
+    driver: bridge
+
