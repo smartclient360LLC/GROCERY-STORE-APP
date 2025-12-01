@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -23,7 +23,7 @@ const Home = () => {
 
   const fetchFrequentlyOrdered = async () => {
     try {
-      const response = await axios.get(`/api/orders/user/${user.userId}/frequently-ordered`)
+      const response = await apiClient.get(`/api/orders/user/${user.userId}/frequently-ordered`)
       setFrequentlyOrdered(response.data)
     } catch (error) {
       console.error('Error fetching frequently ordered products:', error)
@@ -41,7 +41,7 @@ const Home = () => {
       const quantity = product.averageQuantity || 1
       const weight = product.averageWeight ? product.averageWeight.toString() : null
       
-      await axios.post(`/api/cart/${user.userId}/items`, null, {
+      await apiClient.post(`/api/cart/${user.userId}/items`, null, {
         params: {
           productId: product.productId,
           productName: product.productName,

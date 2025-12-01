@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -45,7 +45,7 @@ const ProductDetails = () => {
 
   const fetchProduct = async () => {
     try {
-      const response = await axios.get(`/api/catalog/products/${id}`)
+      const response = await apiClient.get(`/api/catalog/products/${id}`)
       // Backend already checks availability
       setProduct(response.data)
     } catch (error) {
@@ -60,7 +60,7 @@ const ProductDetails = () => {
   const checkWishlistStatus = async () => {
     if (!user) return
     try {
-      const response = await axios.get(`/api/catalog/wishlist/${user.userId}`)
+      const response = await apiClient.get(`/api/catalog/wishlist/${user.userId}`)
       const wishlistItem = response.data.find(item => item.productId === parseInt(id))
       if (wishlistItem) {
         setIsInWishlist(true)
@@ -75,7 +75,7 @@ const ProductDetails = () => {
     if (!product) return
     setLoadingSubstitutions(true)
     try {
-      const response = await axios.get(`/api/catalog/products/${product.id}/substitutions?limit=5`)
+      const response = await apiClient.get(`/api/catalog/products/${product.id}/substitutions?limit=5`)
       setSubstitutions(response.data)
     } catch (error) {
       console.error('Error fetching substitutions:', error)
@@ -92,12 +92,12 @@ const ProductDetails = () => {
 
     try {
       if (isInWishlist) {
-        await axios.delete(`/api/catalog/wishlist/${user.userId}/products/${id}`)
+        await apiClient.delete(`/api/catalog/wishlist/${user.userId}/products/${id}`)
         setIsInWishlist(false)
         setWishlistId(null)
         setSuccessMessage('Removed from wishlist')
       } else {
-        await axios.post(`/api/catalog/wishlist/${user.userId}/products/${id}`)
+        await apiClient.post(`/api/catalog/wishlist/${user.userId}/products/${id}`)
         setIsInWishlist(true)
         setSuccessMessage('Added to wishlist')
       }
@@ -131,7 +131,7 @@ const ProductDetails = () => {
         params.quantity = quantity
       }
       
-      await axios.post(`/api/cart/${user.userId}/items`, null, { params })
+      await apiClient.post(`/api/cart/${user.userId}/items`, null, { params })
       refreshCart()
       setSuccessMessage(isWeightBased() 
         ? `${parseFloat(weight).toFixed(2)} lbs of ${product?.name} added to cart successfully!`

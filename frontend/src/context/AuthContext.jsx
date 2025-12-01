@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import axios from 'axios'
+import apiClient from '../config/axios'
 
 const AuthContext = createContext()
 
@@ -20,18 +20,18 @@ export const AuthProvider = ({ children }) => {
     const userData = localStorage.getItem('user')
     if (token && userData) {
       setUser(JSON.parse(userData))
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      // Token is automatically added by axios interceptor
     }
     setLoading(false)
   }, [])
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('/api/auth/login', { email, password })
+      const response = await apiClient.post('/api/auth/login', { email, password })
       const { token, ...userData } = response.data
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(userData))
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      // Token is automatically added by axios interceptor
       setUser(userData)
       return { success: true }
     } catch (error) {
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, firstName, lastName) => {
     try {
-      const response = await axios.post('/api/auth/register', {
+      const response = await apiClient.post('/api/auth/register', {
         email,
         password,
         firstName,
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
       const { token, ...userData } = response.data
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(userData))
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      // Token is automatically added by axios interceptor
       setUser(userData)
       return { success: true }
     } catch (error) {
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    delete axios.defaults.headers.common['Authorization']
+    // Token removal handled by interceptor
     setUser(null)
   }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -23,7 +23,7 @@ const RecipeDetails = () => {
 
   const fetchRecipe = async () => {
     try {
-      const response = await axios.get(`/api/catalog/recipes/${id}`)
+      const response = await apiClient.get(`/api/catalog/recipes/${id}`)
       setRecipe(response.data)
     } catch (error) {
       console.error('Error fetching recipe:', error)
@@ -67,7 +67,7 @@ const RecipeDetails = () => {
           let price = ingredient.currentPrice
           if (!price) {
             try {
-              const productResponse = await axios.get(`/api/catalog/products/${ingredient.productId}`)
+              const productResponse = await apiClient.get(`/api/catalog/products/${ingredient.productId}`)
               price = productResponse.data.price
             } catch (error) {
               console.error(`Error fetching product ${ingredient.productId}:`, error)
@@ -76,7 +76,7 @@ const RecipeDetails = () => {
             }
           }
 
-          await axios.post(`/api/cart/${user.userId}/items`, null, {
+          await apiClient.post(`/api/cart/${user.userId}/items`, null, {
             params: {
               productId: ingredient.productId,
               productName: ingredient.productName,

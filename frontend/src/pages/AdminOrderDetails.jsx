@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from '../context/AuthContext'
 import './AdminOrderDetails.css'
 
@@ -19,7 +19,7 @@ const AdminOrderDetails = () => {
   const fetchOrderDetails = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get(`/api/orders/${id}`, {
+      const response = await apiClient.get(`/api/orders/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -29,7 +29,7 @@ const AdminOrderDetails = () => {
       // Fetch customer info if userId is available
       if (response.data.userId) {
         try {
-          const userResponse = await axios.get(`/api/auth/users/${response.data.userId}`, {
+          const userResponse = await apiClient.get(`/api/auth/users/${response.data.userId}`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -54,7 +54,7 @@ const AdminOrderDetails = () => {
   const updateOrderStatus = async (newStatus) => {
     try {
       const token = localStorage.getItem('token')
-      await axios.put(`/api/orders/${id}/status`, null, {
+      await apiClient.put(`/api/orders/${id}/status`, null, {
         params: { status: newStatus },
         headers: {
           Authorization: `Bearer ${token}`

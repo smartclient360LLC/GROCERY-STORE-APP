@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import SuccessModal from '../components/SuccessModal'
 import './AdminProductManagement.css'
 
@@ -34,7 +34,7 @@ const AdminProductManagement = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get('/api/catalog/categories', {
+      const response = await apiClient.get('/api/catalog/categories', {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -49,7 +49,7 @@ const AdminProductManagement = () => {
     try {
       const token = localStorage.getItem('token')
       // Use admin endpoint to get product even if inactive/out of stock
-      const response = await axios.get(`/api/catalog/products/${id}/admin`, {
+      const response = await apiClient.get(`/api/catalog/products/${id}/admin`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -140,14 +140,14 @@ const AdminProductManagement = () => {
       
       let response
       if (isEdit) {
-        response = await axios.put(`/api/catalog/products/${id}`, payload, {
+        response = await apiClient.put(`/api/catalog/products/${id}`, payload, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         })
       } else {
-        response = await axios.post('/api/catalog/products', payload, {
+        response = await apiClient.post('/api/catalog/products', payload, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'

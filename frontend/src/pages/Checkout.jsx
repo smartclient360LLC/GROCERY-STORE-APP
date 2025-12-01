@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -89,7 +89,7 @@ const CheckoutForm = ({ cart, shippingAddress, setShippingAddress, deliveryPoint
 
       let orderResponse
       try {
-        orderResponse = await axios.post('/api/orders', {
+        orderResponse = await apiClient.post('/api/orders', {
           userId: user.userId,
           items: cart.items.map(item => ({
             productId: item.productId,
@@ -164,7 +164,7 @@ const CheckoutForm = ({ cart, shippingAddress, setShippingAddress, deliveryPoint
           currency: typeof paymentRequest.currency
         })
         
-        paymentResponse = await axios.post('/api/payments/create-intent', paymentRequest, {
+        paymentResponse = await apiClient.post('/api/payments/create-intent', paymentRequest, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
           }
@@ -241,7 +241,7 @@ const CheckoutForm = ({ cart, shippingAddress, setShippingAddress, deliveryPoint
       // Handle different payment intent statuses
       if (paymentIntent.status === 'succeeded') {
         // Payment successful - clear cart and show success
-        await axios.delete(`/api/cart/${user.userId}`)
+        await apiClient.delete(`/api/cart/${user.userId}`)
         refreshCart()
         
         // Show success modal first
@@ -372,7 +372,7 @@ const Checkout = () => {
 
   const fetchCart = async () => {
     try {
-      const response = await axios.get(`/api/cart/${user.userId}`)
+      const response = await apiClient.get(`/api/cart/${user.userId}`)
       setCart(response.data)
       if (!response.data || response.data.items.length === 0) {
         navigate('/cart')
@@ -388,7 +388,7 @@ const Checkout = () => {
       
       for (const item of response.data.items) {
         try {
-          const productResponse = await axios.get(`/api/catalog/products/${item.productId}`)
+          const productResponse = await apiClient.get(`/api/catalog/products/${item.productId}`)
           const product = productResponse.data
           productDetails[item.productId] = product
           

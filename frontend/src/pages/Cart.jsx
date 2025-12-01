@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import './Cart.css'
@@ -30,7 +30,7 @@ const Cart = () => {
 
   const fetchCart = async () => {
     try {
-      const response = await axios.get(`/api/cart/${user.userId}`)
+      const response = await apiClient.get(`/api/cart/${user.userId}`)
       setCart(response.data)
       
       // Fetch product details to get categories
@@ -40,7 +40,7 @@ const Cart = () => {
       
       for (const item of response.data.items) {
         try {
-          const productResponse = await axios.get(`/api/catalog/products/${item.productId}`)
+          const productResponse = await apiClient.get(`/api/catalog/products/${item.productId}`)
           const product = productResponse.data
           productDetails[item.productId] = product
           
@@ -81,7 +81,7 @@ const Cart = () => {
 
   const updateQuantity = async (itemId, quantity) => {
     try {
-      await axios.put(`/api/cart/${user.userId}/items/${itemId}`, null, {
+      await apiClient.put(`/api/cart/${user.userId}/items/${itemId}`, null, {
         params: { quantity }
       })
       await fetchCart()
@@ -111,7 +111,7 @@ const Cart = () => {
       console.log('Request URL:', url)
       
       // Try with query parameter first
-      const response = await axios.put(url, null, {
+      const response = await apiClient.put(url, null, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -158,7 +158,7 @@ const Cart = () => {
 
   const removeItem = async (itemId) => {
     try {
-      await axios.delete(`/api/cart/${user.userId}/items/${itemId}`)
+      await apiClient.delete(`/api/cart/${user.userId}/items/${itemId}`)
       await fetchCart()
       refreshCart()
     } catch (error) {

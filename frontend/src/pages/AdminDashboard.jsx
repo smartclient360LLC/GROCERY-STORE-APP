@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { playNotificationSound } from '../utils/soundNotification'
 import './AdminDashboard.css'
 
@@ -29,7 +29,7 @@ const AdminDashboard = () => {
       console.log('Fetching products with token:', token.substring(0, 20) + '...')
       
       // Use admin endpoint to see all products including inactive
-      const response = await axios.get('/api/catalog/products/admin/all', {
+      const response = await apiClient.get('/api/catalog/products/admin/all', {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -55,7 +55,7 @@ const AdminDashboard = () => {
   const fetchCategories = async () => {
     setLoading(true)
     try {
-      const response = await axios.get('/api/catalog/categories')
+      const response = await apiClient.get('/api/catalog/categories')
       setCategories(response.data)
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -75,7 +75,7 @@ const AdminDashboard = () => {
       }
       
       const token = localStorage.getItem('token')
-      const response = await axios.get(url, {
+      const response = await apiClient.get(url, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -92,7 +92,7 @@ const AdminDashboard = () => {
       await Promise.all(
         uniqueUserIds.map(async (userId) => {
           try {
-            const userResponse = await axios.get(`/api/auth/users/${userId}`, {
+            const userResponse = await apiClient.get(`/api/auth/users/${userId}`, {
               headers: {
                 Authorization: `Bearer ${token}`
               }
@@ -170,7 +170,7 @@ const AdminDashboard = () => {
     
     try {
       const token = localStorage.getItem('token')
-      await axios.delete(`/api/catalog/products/${productId}`, {
+      await apiClient.delete(`/api/catalog/products/${productId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -409,7 +409,7 @@ const AdminDashboard = () => {
                         }
                         try {
                           const token = localStorage.getItem('token')
-                          await axios.delete(`/api/catalog/categories/${category.id}`, {
+                          await apiClient.delete(`/api/catalog/categories/${category.id}`, {
                             headers: {
                               Authorization: `Bearer ${token}`
                             }

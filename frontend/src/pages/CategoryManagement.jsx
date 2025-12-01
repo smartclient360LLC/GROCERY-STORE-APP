@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import SuccessModal from '../components/SuccessModal'
 import './CategoryManagement.css'
 
@@ -26,7 +26,7 @@ const CategoryManagement = () => {
   const fetchCategory = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get(`/api/catalog/categories/${id}`, {
+      const response = await apiClient.get(`/api/catalog/categories/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -77,14 +77,14 @@ const CategoryManagement = () => {
       
       let response
       if (isEdit) {
-        response = await axios.put(`/api/catalog/categories/${id}`, payload, {
+        response = await apiClient.put(`/api/catalog/categories/${id}`, payload, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         })
       } else {
-        response = await axios.post('/api/catalog/categories', payload, {
+        response = await apiClient.post('/api/catalog/categories', payload, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'

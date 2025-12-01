@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from '../context/AuthContext'
 import SuccessModal from '../components/SuccessModal'
 import './OrderReceipt.css'
@@ -33,7 +33,7 @@ const OrderReceipt = () => {
   const fetchOrderDetails = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get(`/api/orders/${orderId}`, {
+      const response = await apiClient.get(`/api/orders/${orderId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -49,7 +49,7 @@ const OrderReceipt = () => {
   const fetchLatestOrder = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get(`/api/orders/user/${user.userId}`, {
+      const response = await apiClient.get(`/api/orders/user/${user.userId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

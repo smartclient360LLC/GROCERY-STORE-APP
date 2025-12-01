@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from './AuthContext'
 
 const CartContext = createContext()
@@ -24,7 +24,7 @@ export const CartProvider = ({ children }) => {
     }
 
     try {
-      const response = await axios.get(`/api/cart/${user.userId}`)
+      const response = await apiClient.get(`/api/cart/${user.userId}`)
       const itemCount = response.data?.itemCount || 0
       setCartCount(itemCount)
     } catch (error) {

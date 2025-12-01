@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import './RecipeList.css'
 
 const RecipeList = () => {
@@ -24,7 +24,7 @@ const RecipeList = () => {
 
   const fetchRecipes = async () => {
     try {
-      const response = await axios.get('/api/catalog/recipes')
+      const response = await apiClient.get('/api/catalog/recipes')
       setRecipes(response.data)
       setFilteredRecipes(response.data)
     } catch (error) {

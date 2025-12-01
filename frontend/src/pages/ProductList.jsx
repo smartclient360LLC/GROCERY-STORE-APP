@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import './ProductList.css'
 
 const ProductList = () => {
@@ -23,7 +23,7 @@ const ProductList = () => {
   const fetchCategories = async () => {
     try {
       console.log('Fetching categories...')
-      const response = await axios.get('/api/catalog/categories')
+      const response = await apiClient.get('/api/catalog/categories')
       console.log('Categories response:', response.data)
       if (response.data && Array.isArray(response.data)) {
         setCategories(response.data)
@@ -50,7 +50,7 @@ const ProductList = () => {
         ? `/api/catalog/products/category/${selectedCategory}`
         : '/api/catalog/products'
       console.log('Fetching products from:', url)
-      const response = await axios.get(url)
+      const response = await apiClient.get(url)
       console.log('Products response:', response.data)
       // Backend already filters to show only available products
       if (response.data && Array.isArray(response.data)) {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import './SalesReports.css'
 
 const SalesReports = () => {
@@ -21,7 +21,7 @@ const SalesReports = () => {
   const fetchDailySales = async () => {
     setLoading(true)
     try {
-      const response = await axios.get(`/api/orders/sales/daily?date=${selectedDate}`)
+      const response = await apiClient.get(`/api/orders/sales/daily?date=${selectedDate}`)
       setDailyReport(response.data)
     } catch (error) {
       console.error('Error fetching daily sales:', error)
@@ -33,7 +33,7 @@ const SalesReports = () => {
   const fetchMonthlySales = async () => {
     setLoading(true)
     try {
-      const response = await axios.get(`/api/orders/sales/monthly?year=${selectedYear}&month=${selectedMonth}`)
+      const response = await apiClient.get(`/api/orders/sales/monthly?year=${selectedYear}&month=${selectedMonth}`)
       setMonthlyReports(response.data)
     } catch (error) {
       console.error('Error fetching monthly sales:', error)

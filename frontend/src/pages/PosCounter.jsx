@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from '../context/AuthContext'
 import './PosCounter.css'
 
@@ -18,7 +18,7 @@ const PosCounter = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('/api/catalog/products')
+      const response = await apiClient.get('/api/catalog/products')
       setProducts(response.data)
     } catch (error) {
       console.error('Error fetching products:', error)
@@ -72,7 +72,7 @@ const PosCounter = () => {
   const processPayment = async () => {
     setProcessing(true)
     try {
-      const response = await axios.post('/api/orders/pos', {
+      const response = await apiClient.post('/api/orders/pos', {
         userId: user.userId,
         items: cart,
         paymentMethod: paymentMethod,

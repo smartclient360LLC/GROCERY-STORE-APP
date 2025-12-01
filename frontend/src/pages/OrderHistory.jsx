@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import apiClient from '../config/axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -22,7 +22,7 @@ const OrderHistory = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get(`/api/orders/user/${user.userId}`)
+      const response = await apiClient.get(`/api/orders/user/${user.userId}`)
       setOrders(response.data)
     } catch (error) {
       console.error('Error fetching orders:', error)
@@ -37,7 +37,7 @@ const OrderHistory = () => {
     setReordering(true)
     try {
       // Get order items
-      const response = await axios.get(`/api/orders/${orderId}/reorder-items`, {
+      const response = await apiClient.get(`/api/orders/${orderId}/reorder-items`, {
         params: { userId: user.userId }
       })
       const items = response.data
@@ -49,7 +49,7 @@ const OrderHistory = () => {
           const quantity = item.quantity || 1
           const weight = item.weight ? item.weight.toString() : null
           
-          await axios.post(`/api/cart/${user.userId}/items`, null, {
+          await apiClient.post(`/api/cart/${user.userId}/items`, null, {
             params: {
               productId: item.productId,
               productName: item.productName,
