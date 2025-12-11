@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import apiClient from '../config/axios'
+import apiClient from '../config/api'
 import { useAuth } from './AuthContext'
 
 const CartContext = createContext()
@@ -28,17 +28,27 @@ export const CartProvider = ({ children }) => {
       const itemCount = response.data?.itemCount || 0
       setCartCount(itemCount)
     } catch (error) {
-      console.error('Error fetching cart count:', error)
+      // Don't log 401 errors - just set cart count to 0
+      if (error.response?.status !== 401) {
+        console.error('Error fetching cart count:', error)
+      }
       setCartCount(0)
     }
   }
 
   useEffect(() => {
     if (user) {
-      fetchCartCount()
+      // Add a small delay to ensure auth is fully initialized
+      const timeoutId = setTimeout(() => {
+        fetchCartCount()
+      }, 100)
+      
       // Refresh cart count every 5 seconds
       const interval = setInterval(fetchCartCount, 5000)
-      return () => clearInterval(interval)
+      return () => {
+        clearTimeout(timeoutId)
+        clearInterval(interval)
+      }
     } else {
       setCartCount(0)
     }

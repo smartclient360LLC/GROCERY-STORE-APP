@@ -15,12 +15,10 @@ Your Stripe test keys have been configured:
 
 ## 🔑 Current Keys
 
-⚠️ **IMPORTANT**: Never commit secret keys to the repository!
+- **Public Key**: `pk_test_...` (Set via `STRIPE_PUBLIC_KEY` environment variable)
+- **Secret Key**: `sk_test_...` (Set via `STRIPE_SECRET_KEY` environment variable - **DO NOT COMMIT**)
 
-- **Public Key**: Set via `STRIPE_PUBLIC_KEY` environment variable
-- **Secret Key**: Set via `STRIPE_SECRET_KEY` environment variable
-
-See `.env.example` for the required environment variables.
+⚠️ **Never commit actual secret keys to version control!** Use environment variables instead.
 
 ## 🧪 Testing Payments
 

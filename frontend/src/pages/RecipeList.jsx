@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import apiClient from '../config/axios'
+import axios from 'axios'
 import './RecipeList.css'
 
 const RecipeList = () => {
@@ -24,11 +24,23 @@ const RecipeList = () => {
 
   const fetchRecipes = async () => {
     try {
-      const response = await apiClient.get('/api/catalog/recipes')
-      setRecipes(response.data)
-      setFilteredRecipes(response.data)
+      console.log('Fetching recipes from API...')
+      const response = await axios.get('/api/catalog/recipes')
+      console.log('Recipes response:', response.data)
+      if (response.data && Array.isArray(response.data)) {
+        setRecipes(response.data)
+        setFilteredRecipes(response.data)
+        console.log(`Loaded ${response.data.length} recipes`)
+      } else {
+        console.warn('Unexpected response format:', response.data)
+        setRecipes([])
+        setFilteredRecipes([])
+      }
     } catch (error) {
       console.error('Error fetching recipes:', error)
+      console.error('Error details:', error.response?.data || error.message)
+      setRecipes([])
+      setFilteredRecipes([])
     } finally {
       setLoading(false)
     }
@@ -82,17 +94,16 @@ const RecipeList = () => {
               className="recipe-card"
               onClick={() => navigate(`/recipes/${recipe.id}`)}
             >
-              {recipe.imageUrl && (
-                <div className="recipe-image">
-                  <img
-                    src={recipe.imageUrl}
-                    alt={recipe.name}
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/300?text=Recipe'
-                    }}
-                  />
-                </div>
-              )}
+              <div className="recipe-image">
+                <img
+                  src={recipe.imageUrl || 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=300&h=300&fit=crop'}
+                  alt={recipe.name}
+                  onError={(e) => {
+                    e.target.onerror = null
+                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23ddd" width="300" height="300"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="20" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ERecipe%3C/text%3E%3C/svg%3E'
+                  }}
+                />
+              </div>
               <div className="recipe-info">
                 <h3>{recipe.name}</h3>
                 {recipe.description && (

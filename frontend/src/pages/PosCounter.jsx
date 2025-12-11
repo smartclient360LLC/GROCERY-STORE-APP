@@ -11,6 +11,7 @@ const PosCounter = () => {
   const [paymentMethod, setPaymentMethod] = useState('CASH')
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
     fetchProducts()
@@ -66,23 +67,35 @@ const PosCounter = () => {
       alert('Cart is empty!')
       return
     }
-    setShowPaymentModal(true)
+    
+    // For cash payments, process directly without modal
+    if (paymentMethod === 'CASH') {
+      await processPayment('CASH')
+    } else {
+      // For other payment methods, show modal
+      setShowPaymentModal(true)
+    }
   }
 
-  const processPayment = async () => {
+  const processPayment = async (method = null) => {
+    const paymentType = method || paymentMethod
     setProcessing(true)
     try {
       const response = await apiClient.post('/api/orders/pos', {
         userId: user.userId,
         items: cart,
-        paymentMethod: paymentMethod,
+        paymentMethod: paymentType,
         isPosOrder: true
       })
 
-      alert(`Order created! Order Number: ${response.data.orderNumber}`)
+      // Simple success message instead of alert
+      setSuccessMessage(`Order #${response.data.orderNumber} created successfully!`)
       setCart([])
       setShowPaymentModal(false)
       setPaymentMethod('CASH')
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error) {
       console.error('Error creating order:', error)
       alert('Failed to process payment. Please try again.')
@@ -102,6 +115,21 @@ const PosCounter = () => {
         <h1>Cash Counter / POS</h1>
         <div className="pos-user">Cashier: {user?.firstName} {user?.lastName}</div>
       </div>
+      
+      {successMessage && (
+        <div style={{
+          background: '#4caf50',
+          color: 'white',
+          padding: '1rem',
+          margin: '1rem',
+          borderRadius: '8px',
+          textAlign: 'center',
+          fontSize: '1.1rem',
+          fontWeight: 'bold'
+        }}>
+          ✓ {successMessage}
+        </div>
+      )}
 
       <div className="pos-content">
         <div className="pos-products">
@@ -183,12 +211,33 @@ const PosCounter = () => {
             <div className="cart-total">
               <h3>Total: ${getTotal().toFixed(2)}</h3>
             </div>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                Payment Method:
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  fontSize: '1rem',
+                  borderRadius: '4px',
+                  border: '2px solid #ddd'
+                }}
+              >
+                <option value="CASH">💵 Cash</option>
+                <option value="CREDIT_CARD">💳 Credit Card</option>
+                <option value="DEBIT_CARD">💳 Debit Card</option>
+                <option value="QR_CODE">📱 QR Code</option>
+              </select>
+            </div>
             <button
               onClick={handleCheckout}
               className="btn-checkout"
-              disabled={cart.length === 0}
+              disabled={cart.length === 0 || processing}
             >
-              Process Payment
+              {processing ? 'Processing...' : 'Process Payment'}
             </button>
           </div>
         </div>
@@ -232,7 +281,7 @@ const PosCounter = () => {
                 Cancel
               </button>
               <button
-                onClick={processPayment}
+                onClick={() => processPayment()}
                 className="btn-confirm"
                 disabled={processing}
               >

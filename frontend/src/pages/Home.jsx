@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import apiClient from '../config/axios'
+import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -23,7 +23,7 @@ const Home = () => {
 
   const fetchFrequentlyOrdered = async () => {
     try {
-      const response = await apiClient.get(`/api/orders/user/${user.userId}/frequently-ordered`)
+      const response = await axios.get(`/api/orders/user/${user.userId}/frequently-ordered`)
       setFrequentlyOrdered(response.data)
     } catch (error) {
       console.error('Error fetching frequently ordered products:', error)
@@ -41,7 +41,7 @@ const Home = () => {
       const quantity = product.averageQuantity || 1
       const weight = product.averageWeight ? product.averageWeight.toString() : null
       
-      await apiClient.post(`/api/cart/${user.userId}/items`, null, {
+      await axios.post(`/api/cart/${user.userId}/items`, null, {
         params: {
           productId: product.productId,
           productName: product.productName,
@@ -69,11 +69,11 @@ const Home = () => {
         <div className="container">
           <h1>Welcome to India Foods</h1>
           <p>Authentic Indian groceries & fresh meat delivered to your door</p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/products" className="btn btn-primary">
+          <div className="hero-buttons">
+            <Link to="/products" className="btn btn-primary hero-btn">
               Shop Now
             </Link>
-            <Link to="/recipes" className="btn btn-secondary" style={{ background: 'white', color: '#FF6B35', border: '2px solid #FF6B35' }}>
+            <Link to="/recipes" className="btn btn-secondary hero-btn hero-btn-secondary">
               🍳 Browse Recipes
             </Link>
           </div>

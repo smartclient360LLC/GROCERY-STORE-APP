@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import apiClient from '../config/axios'
+import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import './Cart.css'
@@ -9,7 +9,7 @@ const MEAT_MIN_ORDER = 50
 const GROCERY_MIN_ORDER = 100
 
 const Cart = () => {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { refreshCart } = useCart()
   const navigate = useNavigate()
   const [cart, setCart] = useState(null)
@@ -18,19 +18,18 @@ const Cart = () => {
   const [groceryTotal, setGroceryTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [weightInputs, setWeightInputs] = useState({}) // Local state for weight inputs
-  const [substitutions, setSubstitutions] = useState({}) // Map of productId -> substitutions array
 
   useEffect(() => {
-    if (user) {
+    // Wait for auth to finish loading before fetching cart
+    if (!authLoading && user) {
       fetchCart()
-    } else {
-      navigate('/login')
     }
-  }, [user])
+    // ProtectedRoute already handles redirect to login if user is not authenticated
+  }, [user, authLoading])
 
   const fetchCart = async () => {
     try {
-      const response = await apiClient.get(`/api/cart/${user.userId}`)
+      const response = await axios.get(`/api/cart/${user.userId}`)
       setCart(response.data)
       
       // Fetch product details to get categories
@@ -40,7 +39,7 @@ const Cart = () => {
       
       for (const item of response.data.items) {
         try {
-          const productResponse = await apiClient.get(`/api/catalog/products/${item.productId}`)
+          const productResponse = await axios.get(`/api/catalog/products/${item.productId}`)
           const product = productResponse.data
           productDetails[item.productId] = product
           
@@ -81,7 +80,7 @@ const Cart = () => {
 
   const updateQuantity = async (itemId, quantity) => {
     try {
-      await apiClient.put(`/api/cart/${user.userId}/items/${itemId}`, null, {
+      await axios.put(`/api/cart/${user.userId}/items/${itemId}`, null, {
         params: { quantity }
       })
       await fetchCart()
@@ -111,7 +110,7 @@ const Cart = () => {
       console.log('Request URL:', url)
       
       // Try with query parameter first
-      const response = await apiClient.put(url, null, {
+      const response = await axios.put(url, null, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -158,7 +157,7 @@ const Cart = () => {
 
   const removeItem = async (itemId) => {
     try {
-      await apiClient.delete(`/api/cart/${user.userId}/items/${itemId}`)
+      await axios.delete(`/api/cart/${user.userId}/items/${itemId}`)
       await fetchCart()
       refreshCart()
     } catch (error) {
@@ -218,17 +217,13 @@ const Cart = () => {
             const product = products[item.productId]
             const isMeat = product?.categoryName?.toLowerCase().trim() === 'meat'
             const weightBased = isWeightBased(product)
-            const isOutOfStock = product && (!product.active || product.stockQuantity === 0)
-            const itemSubstitutions = substitutions[item.productId] || []
             return (
-              <div key={item.id} className={`cart-item ${isOutOfStock ? 'out-of-stock' : ''}`}>
-                <div className="cart-item-main">
-                  <div className="item-info">
-                    <h3>
-                      {item.productName}
-                      {isMeat && <span className="category-badge meat">Meat</span>}
-                      {isOutOfStock && <span className="out-of-stock-badge">Out of Stock</span>}
-                    </h3>
+              <div key={item.id} className="cart-item">
+                <div className="item-info">
+                  <h3>
+                    {item.productName}
+                    {isMeat && <span className="category-badge meat">Meat</span>}
+                  </h3>
                     <p>${item.price.toFixed(2)} {weightBased ? 'per lb' : 'each'}</p>
                   </div>
                   <div className="item-controls">
@@ -321,40 +316,7 @@ const Cart = () => {
                   >
                     Remove
                   </button>
-                  </div>
                 </div>
-                {isOutOfStock && itemSubstitutions.length > 0 && (
-                  <div className="cart-item-substitutions">
-                    <p className="substitutions-label">💡 Suggested alternatives:</p>
-                    <div className="substitutions-list">
-                      {itemSubstitutions.map((sub) => (
-                        <div key={sub.product.id} className="substitution-mini-card">
-                          <img
-                            src={sub.product.imageUrl || 'https://via.placeholder.com/60'}
-                            alt={sub.product.name}
-                            onClick={() => navigate(`/products/${sub.product.id}`)}
-                            onError={(e) => {
-                              e.target.onerror = null
-                              e.target.src = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=60&h=60&fit=crop'
-                            }}
-                          />
-                          <div className="substitution-mini-info">
-                            <span className="substitution-mini-name" onClick={() => navigate(`/products/${sub.product.id}`)}>
-                              {sub.product.name}
-                            </span>
-                            <span className="substitution-mini-price">${parseFloat(sub.product.price).toFixed(2)}</span>
-                          </div>
-                          <button
-                            onClick={() => navigate(`/products/${sub.product.id}`)}
-                            className="btn btn-primary btn-xs"
-                          >
-                            View
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )
           })}
@@ -393,13 +355,21 @@ const Cart = () => {
           )}
           
           <p className="total">Total: ${cart.total.toFixed(2)}</p>
-          <button 
-            onClick={proceedToCheckout} 
-            className="btn btn-primary"
-            disabled={!canCheckout()}
-          >
-            {canCheckout() ? 'Proceed to Checkout' : 'Add More Items to Checkout'}
-          </button>
+          <div className="cart-action-buttons">
+            <button 
+              onClick={() => navigate('/scheduled-orders/create')} 
+              className="btn btn-secondary"
+            >
+              📅 Schedule Order
+            </button>
+            <button 
+              onClick={proceedToCheckout} 
+              className="btn btn-primary"
+              disabled={!canCheckout()}
+            >
+              {canCheckout() ? 'Proceed to Checkout' : 'Add More Items to Checkout'}
+            </button>
+          </div>
           {!canCheckout() && (
             <p className="checkout-note">Please meet minimum order requirements to proceed</p>
           )}

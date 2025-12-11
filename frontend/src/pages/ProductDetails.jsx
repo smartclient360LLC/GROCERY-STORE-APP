@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import apiClient from '../config/axios'
+import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -19,8 +19,10 @@ const ProductDetails = () => {
   const [successMessage, setSuccessMessage] = useState('')
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [wishlistId, setWishlistId] = useState(null)
-  const [substitutions, setSubstitutions] = useState([])
-  const [loadingSubstitutions, setLoadingSubstitutions] = useState(false)
+  const [showFamilyListModal, setShowFamilyListModal] = useState(false)
+  const [familyAccounts, setFamilyAccounts] = useState([])
+  const [selectedListId, setSelectedListId] = useState(null)
+  const [addingToList, setAddingToList] = useState(false)
   
   // Check if product is sold by weight (meat, fruits, vegetables)
   const isWeightBased = () => {
@@ -34,18 +36,13 @@ const ProductDetails = () => {
     fetchProduct()
     if (user) {
       checkWishlistStatus()
+      fetchFamilyAccounts()
     }
   }, [id, user])
 
-  useEffect(() => {
-    if (product && (!product.active || product.stockQuantity === 0)) {
-      fetchSubstitutions()
-    }
-  }, [product])
-
   const fetchProduct = async () => {
     try {
-      const response = await apiClient.get(`/api/catalog/products/${id}`)
+      const response = await axios.get(`/api/catalog/products/${id}`)
       // Backend already checks availability
       setProduct(response.data)
     } catch (error) {
@@ -60,7 +57,7 @@ const ProductDetails = () => {
   const checkWishlistStatus = async () => {
     if (!user) return
     try {
-      const response = await apiClient.get(`/api/catalog/wishlist/${user.userId}`)
+      const response = await axios.get(`/api/catalog/wishlist/${user.userId}`)
       const wishlistItem = response.data.find(item => item.productId === parseInt(id))
       if (wishlistItem) {
         setIsInWishlist(true)
@@ -71,16 +68,36 @@ const ProductDetails = () => {
     }
   }
 
-  const fetchSubstitutions = async () => {
-    if (!product) return
-    setLoadingSubstitutions(true)
+  const fetchFamilyAccounts = async () => {
+    if (!user) return
     try {
-      const response = await apiClient.get(`/api/catalog/products/${product.id}/substitutions?limit=5`)
-      setSubstitutions(response.data)
+      const response = await axios.get(`/api/auth/family/user/${user.userId}`)
+      const accounts = response.data
+      
+      // Fetch lists for each family account
+      const accountsWithLists = await Promise.all(
+        accounts.map(async (account) => {
+          try {
+            const listsResponse = await axios.get(
+              `/api/auth/family/${account.id}/lists?userId=${user.userId}`
+            )
+            return {
+              ...account,
+              lists: listsResponse.data || []
+            }
+          } catch (error) {
+            console.error(`Error fetching lists for family ${account.id}:`, error)
+            return {
+              ...account,
+              lists: []
+            }
+          }
+        })
+      )
+      
+      setFamilyAccounts(accountsWithLists)
     } catch (error) {
-      console.error('Error fetching substitutions:', error)
-    } finally {
-      setLoadingSubstitutions(false)
+      console.error('Error fetching family accounts:', error)
     }
   }
 
@@ -92,12 +109,12 @@ const ProductDetails = () => {
 
     try {
       if (isInWishlist) {
-        await apiClient.delete(`/api/catalog/wishlist/${user.userId}/products/${id}`)
+        await axios.delete(`/api/catalog/wishlist/${user.userId}/products/${id}`)
         setIsInWishlist(false)
         setWishlistId(null)
         setSuccessMessage('Removed from wishlist')
       } else {
-        await apiClient.post(`/api/catalog/wishlist/${user.userId}/products/${id}`)
+        await axios.post(`/api/catalog/wishlist/${user.userId}/products/${id}`)
         setIsInWishlist(true)
         setSuccessMessage('Added to wishlist')
       }
@@ -107,6 +124,55 @@ const ProductDetails = () => {
       console.error('Error toggling wishlist:', error)
       alert('Failed to update wishlist')
     }
+  }
+
+  const handleAddToFamilyList = async () => {
+    if (!selectedListId) {
+      alert('Please select a list')
+      return
+    }
+
+    setAddingToList(true)
+    try {
+      const requestBody = {
+        productId: product.id,
+        productName: product.name,
+        quantity: isWeightBased() ? 1 : quantity,
+        weight: isWeightBased() ? parseFloat(weight) : null,
+        notes: `Added from product page`
+      }
+
+      await axios.post(
+        `/api/auth/family/lists/${selectedListId}/items?userId=${user.userId}`,
+        requestBody
+      )
+
+      setSuccessMessage(`Added to family list!`)
+      setShowSuccess(true)
+      setShowFamilyListModal(false)
+      setSelectedListId(null)
+      setTimeout(() => setShowSuccess(false), 2000)
+    } catch (error) {
+      console.error('Error adding to family list:', error)
+      alert(error.response?.data?.message || 'Failed to add to family list')
+    } finally {
+      setAddingToList(false)
+    }
+  }
+
+  const getAllLists = () => {
+    const allLists = []
+    familyAccounts.forEach(account => {
+      if (account.lists && account.lists.length > 0) {
+        account.lists.forEach(list => {
+          allLists.push({
+            ...list,
+            familyName: account.familyName
+          })
+        })
+      }
+    })
+    return allLists
   }
 
   const addToCart = async () => {
@@ -131,7 +197,7 @@ const ProductDetails = () => {
         params.quantity = quantity
       }
       
-      await apiClient.post(`/api/cart/${user.userId}/items`, null, { params })
+      await axios.post(`/api/cart/${user.userId}/items`, null, { params })
       refreshCart()
       setSuccessMessage(isWeightBased() 
         ? `${parseFloat(weight).toFixed(2)} lbs of ${product?.name} added to cart successfully!`
@@ -176,7 +242,7 @@ const ProductDetails = () => {
       <div className="product-details-content">
         <div className="product-image">
           <img
-            src={product.imageUrl || 'https://via.placeholder.com/400'}
+            src={product.imageUrl || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=400&fit=crop'}
             alt={product.name}
             onError={(e) => {
               e.target.onerror = null;
@@ -266,72 +332,97 @@ const ProductDetails = () => {
             </div>
             )}
             {user && (
-              <button
-                onClick={toggleWishlist}
-                className={`btn ${isInWishlist ? 'btn-secondary' : 'btn-outline'}`}
-                style={{ marginTop: '0.5rem' }}
-              >
-                {isInWishlist ? '❤️ Remove from Wishlist' : '🤍 Add to Wishlist'}
-              </button>
+              <>
+                <button
+                  onClick={toggleWishlist}
+                  className={`btn ${isInWishlist ? 'btn-secondary' : 'btn-outline'}`}
+                  style={{ marginTop: '0.5rem' }}
+                >
+                  {isInWishlist ? '❤️ Remove from Wishlist' : '🤍 Add to Wishlist'}
+                </button>
+                {familyAccounts.length > 0 && getAllLists().length > 0 && (
+                  <button
+                    onClick={() => setShowFamilyListModal(true)}
+                    className="btn btn-outline"
+                    style={{ marginTop: '0.5rem' }}
+                  >
+                    👨‍👩‍👧‍👦 Add to Family List
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
       </div>
-      
-      {/* Substitutions Section */}
-      {!isAvailable && substitutions.length > 0 && (
-        <div className="substitutions-section">
-          <h2>💡 Suggested Alternatives</h2>
-          <p className="substitutions-intro">This product is currently unavailable. Here are some similar alternatives:</p>
-          <div className="substitutions-grid">
-            {substitutions.map((sub) => (
-              <div key={sub.product.id} className="substitution-card">
-                <img
-                  src={sub.product.imageUrl || 'https://via.placeholder.com/150'}
-                  alt={sub.product.name}
-                  onClick={() => navigate(`/products/${sub.product.id}`)}
-                  onError={(e) => {
-                    e.target.onerror = null
-                    e.target.src = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=150&h=150&fit=crop'
-                  }}
-                />
-                <div className="substitution-info">
-                  <h3 onClick={() => navigate(`/products/${sub.product.id}`)}>
-                    {sub.product.name}
-                  </h3>
-                  <p className="substitution-price">${parseFloat(sub.product.price).toFixed(2)}</p>
-                  {sub.priceDifference && parseFloat(sub.priceDifference) !== 0 && (
-                    <p className={`price-diff ${parseFloat(sub.priceDifference) < 0 ? 'cheaper' : 'more-expensive'}`}>
-                      {parseFloat(sub.priceDifference) < 0 
-                        ? `$${Math.abs(parseFloat(sub.priceDifference)).toFixed(2)} cheaper`
-                        : `$${parseFloat(sub.priceDifference).toFixed(2)} more`}
-                    </p>
-                  )}
-                  <p className="substitution-reason">{sub.reason}</p>
-                  <button
-                    onClick={() => navigate(`/products/${sub.product.id}`)}
-                    className="btn btn-primary btn-sm"
-                  >
-                    View Product
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {!isAvailable && loadingSubstitutions && (
-        <div className="substitutions-section">
-          <p>Loading suggestions...</p>
-        </div>
-      )}
-      
       <SuccessModal
         show={showSuccess}
         message={successMessage}
         onClose={() => setShowSuccess(false)}
       />
+
+      {showFamilyListModal && (
+        <div className="modal-overlay" onClick={() => setShowFamilyListModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Add to Family List</h2>
+            <div className="form-group">
+              <label htmlFor="familyList">Select List *</label>
+              <select
+                id="familyList"
+                value={selectedListId || ''}
+                onChange={(e) => setSelectedListId(parseInt(e.target.value))}
+                className="input"
+                style={{ width: '100%', padding: '0.75rem' }}
+              >
+                <option value="">-- Select a list --</option>
+                {familyAccounts.map(account => 
+                  account.lists && account.lists.length > 0 && (
+                    <optgroup key={account.id} label={`${account.familyName}`}>
+                      {account.lists.map(list => (
+                        <option key={list.id} value={list.id}>
+                          {list.listName} {list.isDefault && '(Default)'}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )
+                )}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Product Details</label>
+              <div style={{ padding: '0.75rem', background: '#f8f9fa', borderRadius: '8px' }}>
+                <p><strong>{product.name}</strong></p>
+                <p>
+                  {isWeightBased() 
+                    ? `Weight: ${parseFloat(weight).toFixed(2)} lbs`
+                    : `Quantity: ${quantity}`
+                  }
+                </p>
+              </div>
+            </div>
+            <div className="form-actions">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFamilyListModal(false)
+                  setSelectedListId(null)
+                }}
+                className="btn btn-secondary"
+                disabled={addingToList}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddToFamilyList}
+                className="btn btn-primary"
+                disabled={addingToList || !selectedListId}
+              >
+                {addingToList ? 'Adding...' : 'Add to List'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

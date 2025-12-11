@@ -239,10 +239,37 @@ const OrderReceipt = () => {
           </table>
         </div>
 
+        {order.carbonFootprintKg && (
+          <div className="receipt-section carbon-footprint-section">
+            <h2>🌍 Environmental Impact</h2>
+            <div className="carbon-info">
+              <div className="carbon-main">
+                <div className="carbon-value">
+                  <span className="carbon-number">{order.carbonFootprintKg.toFixed(2)}</span>
+                  <span className="carbon-unit">kg CO₂</span>
+                </div>
+                <p className="carbon-equivalent">
+                  ≈ {(order.carbonFootprintKg * 2.5).toFixed(1)} miles driven in a car
+                </p>
+              </div>
+              {order.deliveryDistanceKm && (
+                <div className="carbon-details">
+                  <p><strong>Delivery Distance:</strong> {order.deliveryDistanceKm.toFixed(1)} km</p>
+                </div>
+              )}
+            </div>
+            <p className="carbon-note">
+              💡 Tip: Choose more plant-based products to reduce your carbon footprint!
+            </p>
+          </div>
+        )}
+
         <div className="receipt-footer">
           <p className="thank-you">Thank you for shopping with India Foods!</p>
           <p className="receipt-note">
-            Your order has been confirmed and will be prepared for delivery/pickup at the selected location.
+            {order.status === 'PENDING' 
+              ? 'Your order is pending confirmation. We will notify you once your order is confirmed and ready for preparation.'
+              : 'Your order has been confirmed and will be prepared for delivery/pickup at the selected location.'}
           </p>
           <p className="receipt-note">
             Order Number: <strong>{order.orderNumber}</strong>
@@ -253,7 +280,7 @@ const OrderReceipt = () => {
       {showSuccess && (
         <SuccessModal 
           show={showSuccess}
-          message="Payment successful! Your order has been confirmed. You can print your receipt below." 
+          message="Payment successful! Your order has been received and is pending confirmation. You will be notified once it's confirmed." 
           onClose={() => setShowSuccess(false)}
         />
       )}

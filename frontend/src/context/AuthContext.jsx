@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import apiClient from '../config/axios'
+import axios from 'axios'
 
 const AuthContext = createContext()
 
@@ -19,19 +19,26 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token')
     const userData = localStorage.getItem('user')
     if (token && userData) {
-      setUser(JSON.parse(userData))
-      // Token is automatically added by axios interceptor
+      try {
+        const parsedUser = JSON.parse(userData)
+        setUser(parsedUser)
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      }
     }
     setLoading(false)
   }, [])
 
   const login = async (email, password) => {
     try {
-      const response = await apiClient.post('/api/auth/login', { email, password })
+      const response = await axios.post('/api/auth/login', { email, password })
       const { token, ...userData } = response.data
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(userData))
-      // Token is automatically added by axios interceptor
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       setUser(userData)
       return { success: true }
     } catch (error) {
@@ -41,7 +48,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, firstName, lastName) => {
     try {
-      const response = await apiClient.post('/api/auth/register', {
+      const response = await axios.post('/api/auth/register', {
         email,
         password,
         firstName,
@@ -50,7 +57,7 @@ export const AuthProvider = ({ children }) => {
       const { token, ...userData } = response.data
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(userData))
-      // Token is automatically added by axios interceptor
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       setUser(userData)
       return { success: true }
     } catch (error) {
@@ -61,7 +68,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    // Token removal handled by interceptor
+    delete axios.defaults.headers.common['Authorization']
     setUser(null)
   }
 

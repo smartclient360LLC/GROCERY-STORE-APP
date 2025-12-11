@@ -28,6 +28,9 @@ public class OrderDto {
     private Order.PaymentMethod paymentMethod;
     private Boolean isPosOrder;
     private ShippingAddress shippingAddress;
+    private BigDecimal carbonFootprintKg;
+    private BigDecimal deliveryDistanceKm;
+    private String packagingType;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -1,64 +1,63 @@
-# Compiled class files
-*.class
-
-# Log files
-*.log
-
-# Package files
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-# Maven
-target/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
-
-# Node
+# Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-yarn.lock
+frontend/node_modules/
+backend/*/target/
+backend/*/.mvn/
 
 # Environment variables
 .env
 .env.local
-.env.*.local
+.env.production
+.env.development
+frontend/.env
+frontend/.env.local
+backend/*/.env
+
+# Build outputs
+frontend/dist/
+frontend/build/
+backend/*/target/
+*.jar
+*.war
 
 # IDE
 .idea/
-*.iml
 .vscode/
+*.iml
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Build outputs
-dist/
-build/
-*.class
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+backend/*/logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# AWS
+.aws/
+amplify/
 
 # Docker
 docker-compose.override.yml
 
-# Logs
-logs/
-*.log
+# Database
+*.db
+*.sqlite
 
-# OS
-Thumbs.db
+# Testing
+coverage/
+.nyc_output/
 
+# Misc
+*.pid
+*.seed
+*.pid.lock

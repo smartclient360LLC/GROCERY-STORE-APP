@@ -57,6 +57,15 @@ public class Order {
     @Embedded
     private ShippingAddress shippingAddress;
     
+    @Column(name = "carbon_footprint_kg", precision = 10, scale = 4)
+    private BigDecimal carbonFootprintKg;
+    
+    @Column(name = "delivery_distance_km", precision = 10, scale = 2)
+    private BigDecimal deliveryDistanceKm;
+    
+    @Column(name = "packaging_type")
+    private String packagingType;
+    
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
     

@@ -1,20 +1,27 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import apiClient from '../config/axios'
+import axios from 'axios'
+import { useAuth } from '../context/AuthContext'
+import SuccessModal from '../components/SuccessModal'
 import './ProductList.css'
 
 const ProductList = () => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [filteredProducts, setFilteredProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
     fetchCategories()
     fetchProducts()
-  }, [])
+  }, [user])
 
   useEffect(() => {
     fetchProducts()
@@ -89,6 +96,7 @@ const ProductList = () => {
     }
   }, [searchTerm, products])
 
+
   return (
     <div className="container product-list">
       <h1>Our Products</h1>
@@ -136,7 +144,7 @@ const ProductList = () => {
           {filteredProducts.map(product => (
             <div key={product.id} className="product-card">
               <img
-                src={product.imageUrl || 'https://via.placeholder.com/300'}
+                src={product.imageUrl || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=300&fit=crop'}
                 alt={product.name}
                 onError={(e) => {
                   e.target.onerror = null;
@@ -149,13 +157,22 @@ const ProductList = () => {
               )}
               <p className="price">${product.price.toFixed(2)}</p>
               <p className="stock">Stock: {product.stockQuantity}</p>
-              <Link to={`/products/${product.id}`} className="btn btn-primary">
-                View Details
-              </Link>
+              <div className="product-actions">
+                <Link to={`/products/${product.id}`} className="btn btn-primary">
+                  View Details
+                </Link>
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      <SuccessModal
+        show={showSuccess}
+        message={successMessage}
+        onClose={() => setShowSuccess(false)}
+      />
+
     </div>
   )
 }

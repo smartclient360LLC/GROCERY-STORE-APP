@@ -28,9 +28,9 @@ spring:
     password: ${RABBITMQ_PASSWORD:guest}
 
 stripe:
-  secret-key: ${STRIPE_SECRET_KEY:}
-  public-key: ${STRIPE_PUBLIC_KEY:}
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  secret-key: ${STRIPE_SECRET_KEY}
+  public-key: ${STRIPE_PUBLIC_KEY}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret}
 
 logging:
   level:

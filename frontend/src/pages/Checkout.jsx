@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import apiClient from '../config/axios'
+import apiClient from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -18,326 +18,164 @@ const DELIVERY_POINTS = [
 
 const MEAT_MIN_ORDER = 50
 const GROCERY_MIN_ORDER = 100
-const TAX_RATE = 0.061 // Utah state grocery tax: 6.1%
-const DELIVERY_FEE = 10.00 // Delivery fee for orders below $100
-const FREE_DELIVERY_THRESHOLD = 100.00 // Free delivery threshold
+const TAX_RATE = 0.061
+const DELIVERY_FEE = 10.00
+const FREE_DELIVERY_THRESHOLD = 100.00
 
-// Helper function to check if product is rice or atta by category name
 const isRiceOrAtta = (categoryName) => {
   if (!categoryName) return false
   const category = categoryName.toLowerCase().trim()
   return category === 'rice' || category === 'atta'
 }
 
-const CheckoutForm = ({ cart, shippingAddress, setShippingAddress, deliveryPoint, minOrderMet, subtotal, taxAmount, deliveryFee }) => {
+// Payment Form Component
+const PaymentForm = ({ order, totalAmount, onSuccess, onError }) => {
   const stripe = useStripe()
   const elements = useElements()
   const { user } = useAuth()
   const { refreshCart } = useCart()
-  const navigate = useNavigate()
   const [processing, setProcessing] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
+  const [error, setError] = useState(null)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!stripe || !elements) return
+  const handlePayment = async () => {
+    if (!stripe || !elements) {
+      setError('Stripe is not loaded. Please refresh the page.')
+      return
+    }
+
+    // Verify user and token before proceeding
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setError('You are not logged in. Please log in again.')
+      return
+    }
+
+    if (!user || !user.userId) {
+      setError('User information is missing. Please refresh the page.')
+      return
+    }
 
     setProcessing(true)
+    setError(null)
 
     try {
-      // Validate required fields before proceeding
-      if (!cart || !cart.items || cart.items.length === 0) {
-        alert('Your cart is empty. Please add items to your cart before checkout.')
-        setProcessing(false)
-        navigate('/cart')
-        return
-      }
-
-      if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode) {
-        alert('Please fill in all shipping address fields.')
-        setProcessing(false)
-        return
-      }
-
-      if (!deliveryPoint) {
-        alert('Please select a delivery point.')
-        setProcessing(false)
-        return
-      }
-
-      if (!minOrderMet) {
-        alert('Minimum order requirements not met. Please add more items to your cart.')
-        setProcessing(false)
-        return
-      }
-
-      if (!user || !user.userId) {
-        alert('User information is missing. Please log in again.')
-        setProcessing(false)
-        navigate('/login')
-        return
-      }
-
-      // Create order with delivery point info
-      const selectedDeliveryPoint = deliveryPoint ? DELIVERY_POINTS.find(dp => dp.id === deliveryPoint) : null
-      
-      console.log('Creating order with data:', {
+      // Step 1: Create Payment Intent
+      const paymentRequest = {
+        orderNumber: order.orderNumber,
         userId: user.userId,
-        itemsCount: cart.items.length,
-        deliveryPoint: selectedDeliveryPoint?.name
-      })
-
-      let orderResponse
-      try {
-        orderResponse = await apiClient.post('/api/orders', {
-          userId: user.userId,
-          items: cart.items.map(item => ({
-            productId: item.productId,
-            productName: item.productName,
-            price: item.price,
-            quantity: item.weight && item.weight > 0 ? 1 : item.quantity,
-            weight: item.weight && item.weight > 0 ? item.weight : null
-          })),
-          shippingAddress: {
-            ...shippingAddress,
-            deliveryPoint: selectedDeliveryPoint ? selectedDeliveryPoint.name : null
-          },
-          paymentMethod: 'ONLINE',
-          isPosOrder: false
-        }, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-      } catch (orderError) {
-        console.error('Order creation error:', orderError)
-        const errorMessage = orderError.response?.data?.message || orderError.message || 'Failed to create order'
-        alert(`Order creation failed: ${errorMessage}`)
-        setProcessing(false)
-        return
+        amount: parseFloat(totalAmount),
+        currency: 'usd'
       }
 
-      const order = orderResponse.data
-      console.log('Order created successfully:', order.orderNumber)
-      console.log('Order total amount:', order.totalAmount)
-
-      // Validate order total before creating payment intent
-      if (!order.totalAmount || order.totalAmount <= 0) {
-        alert('Invalid order total. Please contact support.')
-        setProcessing(false)
-        return
-      }
-
-      if (order.totalAmount < 0.50) {
-        alert('Order total must be at least $0.50. Please add more items to your cart.')
-        setProcessing(false)
-        return
-      }
-
-      // Create payment intent (use order total which includes tax)
-      console.log('Creating payment intent for order:', order.orderNumber, 'Amount:', order.totalAmount)
+      console.log('Creating payment intent...', paymentRequest)
+      console.log('Token present:', !!token)
+      console.log('User ID:', user.userId)
       
-      let paymentResponse
-      try {
-        // Ensure amount is a number, not a string
-        const amount = typeof order.totalAmount === 'string' 
-          ? parseFloat(order.totalAmount) 
-          : Number(order.totalAmount)
-        
-        if (isNaN(amount) || amount <= 0) {
-          alert(`Invalid order total: ${order.totalAmount}. Please contact support.`)
-          setProcessing(false)
-          return
-        }
-        
-        const paymentRequest = {
-          orderNumber: order.orderNumber,
-          userId: Number(user.userId), // Ensure userId is a number
-          amount: amount, // Ensure amount is a number
-          currency: 'usd'
-        }
-        console.log('Payment intent request:', paymentRequest)
-        console.log('Payment request types:', {
-          orderNumber: typeof paymentRequest.orderNumber,
-          userId: typeof paymentRequest.userId,
-          amount: typeof paymentRequest.amount,
-          currency: typeof paymentRequest.currency
-        })
-        
-        paymentResponse = await apiClient.post('/api/payments/create-intent', paymentRequest, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-      } catch (paymentError) {
-        console.error('Payment intent creation error:', paymentError)
-        console.error('Payment error response:', paymentError.response?.data)
-        
-        // Extract error message from response
-        let errorMessage = 'Failed to create payment intent'
-        if (paymentError.response?.data) {
-          const errorData = paymentError.response.data
-          if (errorData.message) {
-            errorMessage = errorData.message
-          } else if (errorData.error) {
-            errorMessage = errorData.error
-          } else if (typeof errorData === 'string') {
-            errorMessage = errorData
-          }
-        } else if (paymentError.message) {
-          errorMessage = paymentError.message
-        }
-        
-        alert(`Payment setup failed: ${errorMessage}`)
-        setProcessing(false)
-        return
-      }
-
+      const paymentResponse = await apiClient.post('/api/payments/create-intent', paymentRequest)
       const { clientSecret } = paymentResponse.data
-      
+
       if (!clientSecret) {
-        alert('Payment setup failed: No client secret received')
-        setProcessing(false)
-        return
+        throw new Error('No client secret received from payment service.')
       }
 
-      console.log('Payment intent created successfully')
+      console.log('Payment intent created, confirming payment...')
 
-      // Confirm payment with 3D Secure support
-      console.log('Confirming payment with Stripe...')
+      // Step 2: Confirm Payment with Stripe
       const cardElement = elements.getElement(CardElement)
-      
       if (!cardElement) {
-        alert('Card element not found. Please refresh the page and try again.')
-        setProcessing(false)
-        return
+        throw new Error('Card element not found.')
       }
 
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: cardElement,
           billing_details: {
-            name: user.name || user.email,
+            name: `${user.firstName} ${user.lastName}`.trim() || user.email,
             email: user.email
           }
         }
       })
 
-      if (error) {
-        // Handle specific error types
-        let errorMessage = error.message
-        if (error.type === 'card_error') {
-          errorMessage = `Card error: ${error.message}`
-        } else if (error.type === 'validation_error') {
-          errorMessage = `Validation error: ${error.message}`
-        } else {
-          errorMessage = `Payment failed: ${error.message}`
-        }
-        alert(errorMessage)
-        setProcessing(false)
-        return
+      if (stripeError) {
+        throw new Error(stripeError.message || 'Payment failed.')
       }
 
-      // Handle different payment intent statuses
       if (paymentIntent.status === 'succeeded') {
-        // Payment successful - clear cart and show success
+        // Payment successful - order remains PENDING until admin confirms
+        // Stock will be updated when admin confirms the order
+        
+        // Clear cart and show success
         await apiClient.delete(`/api/cart/${user.userId}`)
         refreshCart()
-        
-        // Show success modal first
-        setShowSuccess(true)
-        
-        // After showing success, navigate to receipt page
-        setTimeout(() => {
-          setShowSuccess(false)
-          // Navigate to receipt page with order ID
-          navigate(`/orders/receipt?orderId=${order.id}&success=true`)
-        }, 2000)
+        onSuccess()
       } else if (paymentIntent.status === 'requires_action') {
-        // 3D Secure authentication required
-        // Stripe.js will automatically handle this, but we should inform the user
-        alert('Please complete the authentication on your card.')
-        setProcessing(false)
-      } else if (paymentIntent.status === 'processing') {
-        // Payment is processing (e.g., for some card types)
-        alert('Your payment is being processed. Please wait...')
+        setError('Please complete the authentication on your card.')
         setProcessing(false)
       } else {
-        // Other statuses (requires_payment_method, canceled, etc.)
-        alert(`Payment status: ${paymentIntent.status}. Please try again.`)
+        setError(`Payment status: ${paymentIntent.status}. Please try again.`)
         setProcessing(false)
       }
-    } catch (error) {
-      console.error('Checkout error:', error)
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        stack: error.stack
-      })
+
+    } catch (err) {
+      console.error('Payment error:', err)
       
-      // Provide more specific error messages
-      let errorMessage = 'Checkout failed. Please try again.'
+      let errorMessage = 'Payment failed. Please try again.'
       
-      if (error.response) {
-        // Server responded with error
-        const status = error.response.status
-        const data = error.response.data
-        
-        if (status === 401) {
-          errorMessage = 'Authentication failed. Please log in again.'
-        } else if (status === 403) {
-          errorMessage = 'Access denied. Please check your permissions.'
-        } else if (status === 400) {
-          errorMessage = data?.message || 'Invalid request. Please check your information.'
-        } else if (status === 500) {
-          errorMessage = 'Server error. Please try again later or contact support.'
-        } else {
-          errorMessage = data?.message || `Error: ${status}. Please try again.`
-        }
-      } else if (error.request) {
-        // Request was made but no response received
-        errorMessage = 'Network error. Please check your internet connection and try again.'
-      } else if (error.message) {
-        // Error setting up the request
-        errorMessage = `Error: ${error.message}`
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message
+      } else if (err.message) {
+        errorMessage = err.message
       }
       
-      alert(errorMessage)
-    } finally {
+      setError(errorMessage)
       setProcessing(false)
+      onError(errorMessage)
     }
   }
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="checkout-form">
-        <div className="form-group">
-          <label>Card Details</label>
-          <CardElement />
+    <div className="payment-form-container">
+      <h2>Payment</h2>
+      <p className="payment-note">💳 Enter your card details to complete the order</p>
+      
+      {error && (
+        <div className="error-message">
+          {error}
         </div>
-        <button
-          type="submit"
-          disabled={!stripe || processing || !minOrderMet || !deliveryPoint}
-          className="btn btn-primary"
-        >
-          {processing ? 'Processing...' : `Pay $${(subtotal + taxAmount).toFixed(2)}`}
-        </button>
-        {!minOrderMet && (
-          <p className="error-text">Minimum order requirement not met. Please add more items.</p>
-        )}
-        {!deliveryPoint && (
-          <p className="error-text">Please select a delivery point.</p>
-        )}
-      </form>
-      {showSuccess && (
-        <SuccessModal
-          show={showSuccess}
-          message="Payment successful! Redirecting to your receipt..."
-          onClose={() => setShowSuccess(false)}
-        />
       )}
-    </>
+
+      <div className="form-group">
+        <label>Card Details</label>
+        <div className="stripe-card-wrapper">
+          <CardElement 
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: '#424770',
+                  '::placeholder': {
+                    color: '#aab7c4',
+                  },
+                },
+                invalid: {
+                  color: '#9e2146',
+                },
+              },
+            }}
+          />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handlePayment}
+        disabled={!stripe || processing}
+        className="btn btn-primary"
+        style={{ width: '100%', marginTop: '1rem' }}
+      >
+        {processing ? 'Processing Payment...' : `Pay $${totalAmount.toFixed(2)}`}
+      </button>
+    </div>
   )
 }
 
@@ -353,6 +191,11 @@ const Checkout = () => {
   const [taxAmount, setTaxAmount] = useState(0)
   const [deliveryFee, setDeliveryFee] = useState(0)
   const [minOrderMet, setMinOrderMet] = useState(false)
+  const [processing, setProcessing] = useState(false)
+  const [error, setError] = useState(null)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [createdOrder, setCreatedOrder] = useState(null)
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [shippingAddress, setShippingAddress] = useState({
     street: '',
     city: '',
@@ -360,140 +203,287 @@ const Checkout = () => {
     zipCode: '',
     country: 'USA'
   })
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (user) {
-      fetchCart()
-    } else {
+    // Check if user is logged in
+    const token = localStorage.getItem('token')
+    const userData = localStorage.getItem('user')
+    
+    if (!user && (!token || !userData)) {
+      // Only redirect if there's no token at all
+      console.log('No user or token found, redirecting to login')
       navigate('/login')
+      return
     }
-  }, [user])
+    
+    // If we have token but no user state, try to parse it
+    if (!user && token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData)
+        // User will be set by AuthContext, just wait
+        return
+      } catch (e) {
+        console.error('Error parsing user data:', e)
+      }
+    }
 
-  const fetchCart = async () => {
-    try {
-      const response = await apiClient.get(`/api/cart/${user.userId}`)
-      setCart(response.data)
-      if (!response.data || response.data.items.length === 0) {
-        navigate('/cart')
+    const fetchCart = async () => {
+      try {
+        const response = await apiClient.get(`/api/cart/${user.userId}`)
+        setCart(response.data)
+      } catch (error) {
+        console.error('Error fetching cart:', error)
+        // Don't redirect - just show error or handle gracefully
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.error('Authentication error - user may need to log in again')
+          // Don't auto-redirect, let user see the error
+        }
+      }
+    }
+
+    const fetchProducts = async () => {
+      try {
+        const response = await apiClient.get('/api/catalog/products')
+        const productsMap = {}
+        response.data.forEach(product => {
+          productsMap[product.id] = product
+        })
+        setProducts(productsMap)
+      } catch (error) {
+        console.error('Error fetching products:', error)
+      }
+    }
+
+    fetchCart()
+    fetchProducts()
+  }, [user, navigate])
+
+  useEffect(() => {
+    if (!cart || !products || !cart.items || cart.items.length === 0) {
+      setSubtotal(0)
+      setTaxAmount(0)
+      setDeliveryFee(0)
+      setMeatTotal(0)
+      setGroceryTotal(0)
+      setMinOrderMet(false)
+      return
+    }
+
+    let meatSum = 0
+    let grocerySum = 0
+    let total = 0
+
+    console.log('Calculating totals for', cart.items.length, 'items')
+    
+    cart.items.forEach((item, index) => {
+      const product = products[item.productId]
+      if (!product) {
+        console.warn(`Product not found for item ${index}:`, item.productId)
         return
       }
+
+      // Calculate item total - use weight if available, otherwise use quantity
+      // Ensure we're using numbers, not strings
+      const price = typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price)
+      const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) : Number(item.quantity)
+      const weight = item.weight ? (typeof item.weight === 'string' ? parseFloat(item.weight) : Number(item.weight)) : 0
       
-      // Fetch product details to get categories
-      const productDetails = {}
-      let meatTotal = 0
-      let groceryTotalForMinOrder = 0 // For minimum order calculation (only one rice/atta counts)
-      let groceryTotalForDisplay = 0 // For display (all items)
-      let hasRiceAtta = false // Track if we've already counted one rice/atta
-      
-      for (const item of response.data.items) {
-        try {
-          const productResponse = await apiClient.get(`/api/catalog/products/${item.productId}`)
-          const product = productResponse.data
-          productDetails[item.productId] = product
-          
-          // Calculate item total: use weight if available, otherwise use quantity
-          const itemTotal = item.weight && item.weight > 0 
-            ? item.price * item.weight 
-            : item.price * item.quantity
-          const isMeat = product.categoryName && product.categoryName.toLowerCase().trim() === 'meat'
-          const isRiceAtta = isRiceOrAtta(product.categoryName)
-          
-          if (isMeat) {
-            meatTotal += itemTotal
-          } else {
-            // For grocery items
-            groceryTotalForDisplay += itemTotal
-            
-            // For minimum order calculation: only ONE rice/atta bag counts
-            if (isRiceAtta) {
-              if (!hasRiceAtta) {
-                // First rice/atta item - count only ONE unit price towards minimum
-                groceryTotalForMinOrder += item.price
-                hasRiceAtta = true
-              }
-              // Additional rice/atta items don't count towards minimum order
-            } else {
-              // Non-rice/atta grocery items count fully
-              groceryTotalForMinOrder += itemTotal
-            }
-          }
-        } catch (error) {
-          console.error(`Error fetching product ${item.productId}:`, error)
+      const itemTotal = weight > 0 
+        ? price * weight
+        : price * quantity
+
+      console.log(`Item ${index + 1}: ${item.productName}`, {
+        price: item.price,
+        quantity: item.quantity,
+        weight: item.weight,
+        itemTotal: itemTotal.toFixed(2)
+      })
+
+      total += itemTotal
+
+      const categoryName = product.categoryName?.toLowerCase() || ''
+      if (categoryName === 'meat') {
+        meatSum += itemTotal
+      } else if (!isRiceOrAtta(categoryName)) {
+        grocerySum += itemTotal
+      }
+    })
+
+    console.log('Calculation summary:', {
+      total: total.toFixed(2),
+      meatSum: meatSum.toFixed(2),
+      grocerySum: grocerySum.toFixed(2)
+    })
+
+    setMeatTotal(meatSum)
+    setGroceryTotal(grocerySum)
+    setSubtotal(total)
+
+    const tax = total * TAX_RATE
+    setTaxAmount(tax)
+
+    const amountAfterTax = total + tax
+    const fee = amountAfterTax < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0
+    setDeliveryFee(fee)
+
+    const meatMet = meatSum === 0 || meatSum >= MEAT_MIN_ORDER
+    const groceryMet = grocerySum === 0 || grocerySum >= GROCERY_MIN_ORDER
+    setMinOrderMet(meatMet && groceryMet)
+  }, [cart, products])
+
+  const handleOrderSubmit = async (e) => {
+    e.preventDefault()
+    setError(null)
+
+    // Validation
+    if (!cart?.items?.length) {
+      setError('Your cart is empty.')
+      return
+    }
+
+    if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode) {
+      setError('Please fill in all shipping address fields.')
+      return
+    }
+
+    if (!deliveryPoint) {
+      setError('Please select a delivery point.')
+      return
+    }
+
+    if (!minOrderMet) {
+      setError('Minimum order requirements not met.')
+      return
+    }
+
+    if (!user?.userId) {
+      setError('Please log in to continue.')
+      // Don't auto-redirect - show error message
+      return
+    }
+
+    setProcessing(true)
+
+    try {
+      // Verify token exists before making request
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setError('You are not logged in. Please log in again.')
+        setProcessing(false)
+        return
+      }
+
+      // Check if token might be expired by trying to decode it
+      try {
+        const tokenParts = token.split('.')
+        if (tokenParts.length !== 3) {
+          throw new Error('Invalid token format')
         }
+        const payload = JSON.parse(atob(tokenParts[1]))
+        const exp = payload.exp * 1000 // Convert to milliseconds
+        if (Date.now() > exp) {
+          setError('Your session has expired. Please log in again.')
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          setProcessing(false)
+          return
+        }
+        console.log('Token is valid, expires at:', new Date(exp))
+      } catch (e) {
+        console.error('Error checking token:', e)
+        // Continue anyway - let backend validate
+      }
+
+      const selectedDeliveryPoint = DELIVERY_POINTS.find(dp => dp.id === deliveryPoint)
+      
+      const orderData = {
+        userId: user.userId,
+        items: cart.items.map(item => ({
+          productId: item.productId,
+          productName: item.productName,
+          price: item.price,
+          quantity: item.weight && item.weight > 0 ? 1 : item.quantity,
+          weight: item.weight && item.weight > 0 ? item.weight : null
+        })),
+        shippingAddress: {
+          ...shippingAddress,
+          deliveryPoint: selectedDeliveryPoint?.name || null
+        },
+        paymentMethod: 'ONLINE',
+        isPosOrder: false
+      }
+
+      console.log('Creating order...', orderData)
+      console.log('Token present:', !!token)
+      console.log('Token length:', token?.length)
+      console.log('User ID from user object:', user.userId)
+      
+      const orderResponse = await apiClient.post('/api/orders', orderData).catch(err => {
+        console.error('Order creation failed:', err)
+        console.error('Response status:', err.response?.status)
+        console.error('Response data:', err.response?.data)
+        console.error('Response headers:', err.response?.headers)
+        throw err
+      })
+      const order = orderResponse.data
+
+      if (!order?.orderNumber) {
+        throw new Error('Invalid order response from server.')
+      }
+
+      console.log('Order created successfully:', order.orderNumber)
+      
+      // Set created order and show payment form
+      setCreatedOrder(order)
+      setShowPaymentForm(true)
+      setProcessing(false)
+
+    } catch (err) {
+      console.error('Order creation error:', err)
+      console.error('Error response:', err.response)
+      console.error('Error status:', err.response?.status)
+      console.error('Error data:', err.response?.data)
+      
+      let errorMessage = 'Failed to create order. Please try again.'
+      
+      if (err.response?.status === 403) {
+        errorMessage = 'Access denied. Your session may have expired. Please log in again.'
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.'
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error
+      } else if (err.message) {
+        errorMessage = err.message
       }
       
-      // Calculate subtotal (before tax) - use display total
-      const calculatedSubtotal = response.data.total || (meatTotal + groceryTotalForDisplay)
+      // Show error message - don't auto-redirect
+      setError(errorMessage)
       
-      // Calculate tax (6.1% of subtotal)
-      const calculatedTax = calculatedSubtotal * TAX_RATE
-      
-      // Calculate amount after tax
-      const amountAfterTax = calculatedSubtotal + calculatedTax
-      
-      // Calculate delivery fee: $10 if order total (subtotal + tax) is below $100
-      const calculatedDeliveryFee = amountAfterTax < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0
-      
-      setProducts(productDetails)
-      setMeatTotal(meatTotal)
-      setGroceryTotal(groceryTotalForDisplay) // Use display total for UI
-      setSubtotal(calculatedSubtotal)
-      setTaxAmount(calculatedTax)
-      setDeliveryFee(calculatedDeliveryFee)
-      
-      // Minimum order met if: (no meat OR meat >= $50) AND (no grocery OR grocery >= $100)
-      // Use groceryTotalForMinOrder which only counts one rice/atta bag
-      const meatOk = meatTotal === 0 || meatTotal >= MEAT_MIN_ORDER
-      const groceryOk = groceryTotalForMinOrder === 0 || groceryTotalForMinOrder >= GROCERY_MIN_ORDER
-      setMinOrderMet(meatOk && groceryOk)
-    } catch (error) {
-      console.error('Error fetching cart:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return <div className="container">Loading...</div>
-  }
-
-  if (!cart) {
-    return <div className="container">Cart not found</div>
-  }
-
-  const getMinOrderMessage = () => {
-    const messages = []
-    if (meatTotal > 0 && meatTotal < MEAT_MIN_ORDER) {
-      messages.push(`Meat: $${(MEAT_MIN_ORDER - meatTotal).toFixed(2)} more needed (min $${MEAT_MIN_ORDER})`)
-    }
-    // Calculate grocery total for minimum order (only one rice/atta counts)
-    let groceryTotalForMin = 0
-    let hasRiceAtta = false
-    for (const item of cart.items) {
-      const product = products[item.productId]
-      if (product && product.categoryName && product.categoryName.toLowerCase().trim() !== 'meat') {
-        const isRiceAtta = isRiceOrAtta(product.categoryName)
-        if (isRiceAtta) {
-          if (!hasRiceAtta) {
-            groceryTotalForMin += item.price // Only count one unit
-            hasRiceAtta = true
-          }
-        } else {
-          // For non-rice/atta grocery items, use weight if available, otherwise quantity
-          const itemValue = item.weight && item.weight > 0 
-            ? item.price * item.weight 
-            : item.price * item.quantity
-          groceryTotalForMin += itemValue
-        }
+      // Only clear auth if it's an auth error
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        console.error('Authentication error - clearing token')
+        // Don't clear immediately - let user see the error first
       }
+      
+      setProcessing(false)
     }
-    if (groceryTotalForMin > 0 && groceryTotalForMin < GROCERY_MIN_ORDER) {
-      messages.push(`Grocery: $${(GROCERY_MIN_ORDER - groceryTotalForMin).toFixed(2)} more needed (min $${GROCERY_MIN_ORDER})`)
-      messages.push(`Note: Only one bag of rice/atta counts towards the $${GROCERY_MIN_ORDER} minimum`)
-    }
-    return messages
   }
+
+  const handlePaymentSuccess = () => {
+    setShowSuccess(true)
+    setTimeout(() => {
+      setShowSuccess(false)
+      navigate(`/orders/receipt?orderId=${createdOrder.id}&success=true`)
+    }, 2000)
+  }
+
+  const handlePaymentError = (errorMessage) => {
+    setError(errorMessage)
+  }
+
+  const totalAmount = subtotal + taxAmount + deliveryFee
 
   return (
     <div className="container checkout">
@@ -505,133 +495,156 @@ const Checkout = () => {
         ← Back to Cart
       </button>
       <h1>Checkout</h1>
+      
       <div className="checkout-content">
         <div className="checkout-form-section">
-          <h2>Delivery Point</h2>
-          <div className="delivery-points">
-            {DELIVERY_POINTS.map(point => (
-              <div
-                key={point.id}
-                className={`delivery-point-card ${deliveryPoint === point.id ? 'selected' : ''}`}
-                onClick={() => setDeliveryPoint(point.id)}
-              >
-                <h3>{point.name}</h3>
-                <p>{point.address}</p>
+          {!showPaymentForm ? (
+            <form onSubmit={handleOrderSubmit}>
+              {error && (
+                <div className="error-message">
+                  {error}
+                </div>
+              )}
+
+              <h2>Delivery Point</h2>
+              <div className="delivery-points">
+                {DELIVERY_POINTS.map(point => (
+                  <div
+                    key={point.id}
+                    className={`delivery-point-card ${deliveryPoint === point.id ? 'selected' : ''}`}
+                    onClick={() => setDeliveryPoint(point.id)}
+                  >
+                    <h3>{point.name}</h3>
+                    <p>{point.address}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          
-          <h2>Shipping Address</h2>
-          <div className="form-group">
-            <label>Street</label>
-            <input
-              type="text"
-              value={shippingAddress.street}
-              onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })}
-              className="input"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>City</label>
-            <input
-              type="text"
-              value={shippingAddress.city}
-              onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
-              className="input"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>State</label>
-            <input
-              type="text"
-              value={shippingAddress.state}
-              onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
-              className="input"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Zip Code</label>
-            <input
-              type="text"
-              value={shippingAddress.zipCode}
-              onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value })}
-              className="input"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Country</label>
-            <input
-              type="text"
-              value={shippingAddress.country}
-              onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
-              className="input"
-              required
-            />
-          </div>
-          <h2>Payment</h2>
-          <p className="payment-note">💳 Card payment only (Cash payment available at store POS)</p>
-          <Elements stripe={stripePromise}>
-            <CheckoutForm
-              cart={cart}
-              shippingAddress={shippingAddress}
-              setShippingAddress={setShippingAddress}
-              deliveryPoint={deliveryPoint}
-              minOrderMet={minOrderMet}
-              subtotal={subtotal}
-              taxAmount={taxAmount}
-              deliveryFee={deliveryFee}
-            />
-          </Elements>
+
+              <h2>Shipping Address</h2>
+              <div className="form-group">
+                <label>Street Address</label>
+                <input
+                  type="text"
+                  value={shippingAddress.street}
+                  onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })}
+                  className="input"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>City</label>
+                <input
+                  type="text"
+                  value={shippingAddress.city}
+                  onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                  className="input"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>State</label>
+                <input
+                  type="text"
+                  value={shippingAddress.state}
+                  onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
+                  className="input"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Zip Code</label>
+                <input
+                  type="text"
+                  value={shippingAddress.zipCode}
+                  onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value })}
+                  className="input"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Country</label>
+                <input
+                  type="text"
+                  value={shippingAddress.country}
+                  onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
+                  className="input"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={processing || !minOrderMet || !deliveryPoint}
+                className="btn btn-primary"
+                style={{ width: '100%', marginTop: '1rem' }}
+              >
+                {processing ? 'Creating Order...' : `Continue to Payment - $${totalAmount.toFixed(2)}`}
+              </button>
+
+              {!minOrderMet && (
+                <p className="error-text">Minimum order requirement not met. Please add more items.</p>
+              )}
+              {!deliveryPoint && (
+                <p className="error-text">Please select a delivery point.</p>
+              )}
+            </form>
+          ) : (
+            <Elements 
+              stripe={stripePromise}
+              options={{
+                appearance: {
+                  theme: 'stripe',
+                  variables: {
+                    colorPrimary: '#4f46e5',
+                    colorBackground: '#ffffff',
+                    colorText: '#1a1a1a',
+                    colorDanger: '#df1b41',
+                    fontFamily: 'system-ui, sans-serif',
+                    spacingUnit: '4px',
+                    borderRadius: '8px',
+                  },
+                },
+              }}
+            >
+              <PaymentForm
+                order={createdOrder}
+                totalAmount={totalAmount}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            </Elements>
+          )}
         </div>
+
         <div className="checkout-summary">
           <h2>Order Summary</h2>
-          {cart.items.map(item => {
+          {cart?.items.map(item => {
             const product = products[item.productId]
             const isMeat = product?.categoryName?.toLowerCase() === 'meat'
             return (
               <div key={item.id} className="summary-item">
-                <span>
-                  {item.productName} {item.weight && item.weight > 0 ? `${item.weight} lbs` : `x ${item.quantity}`}
-                  {isMeat && <span className="category-badge meat">Meat</span>}
-                </span>
-                <span>${item.subtotal.toFixed(2)}</span>
+                <div>
+                  <strong>{item.productName}</strong>
+                  <div className="summary-item-details">
+                    {item.weight && item.weight > 0 ? (
+                      <span>{item.weight} {product?.unit || 'lb'}</span>
+                    ) : (
+                      <span>Qty: {item.quantity}</span>
+                    )}
+                    {isMeat && <span className="category-badge">Meat</span>}
+                  </div>
+                </div>
+                <div className="summary-item-price">
+                  ${(() => {
+                    const price = typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price)
+                    const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) : Number(item.quantity)
+                    const weight = item.weight ? (typeof item.weight === 'string' ? parseFloat(item.weight) : Number(item.weight)) : 0
+                    return (weight > 0 ? price * weight : price * quantity).toFixed(2)
+                  })()}
+                </div>
               </div>
             )
           })}
-          
-          {meatTotal > 0 && (
-            <div className="summary-category">
-              <span>Meat Subtotal</span>
-              <span className={meatTotal >= MEAT_MIN_ORDER ? 'met' : 'not-met'}>
-                ${meatTotal.toFixed(2)} {meatTotal >= MEAT_MIN_ORDER ? '✓' : `(min $${MEAT_MIN_ORDER})`}
-              </span>
-            </div>
-          )}
-          
-          {groceryTotal > 0 && (
-            <div className="summary-category">
-              <span>Grocery Subtotal</span>
-              <span className={groceryTotal >= GROCERY_MIN_ORDER ? 'met' : 'not-met'}>
-                ${groceryTotal.toFixed(2)} {groceryTotal >= GROCERY_MIN_ORDER ? '✓' : `(min $${GROCERY_MIN_ORDER})`}
-              </span>
-            </div>
-          )}
-          
-          {!minOrderMet && (
-            <div className="min-order-warning">
-              <strong>Minimum Order Requirements:</strong>
-              <ul>
-                {getMinOrderMessage().map((msg, idx) => (
-                  <li key={idx}>{msg}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
           <div className="summary-subtotal">
             <span>Subtotal</span>
             <span>${subtotal.toFixed(2)}</span>
@@ -654,13 +667,33 @@ const Checkout = () => {
           )}
           <div className="summary-total">
             <span>Total</span>
-            <span>${(subtotal + taxAmount + deliveryFee).toFixed(2)}</span>
+            <span>${totalAmount.toFixed(2)}</span>
           </div>
+          {!minOrderMet && !showPaymentForm && (
+            <div className="min-order-warning">
+              <strong>⚠️ Minimum Order Requirements:</strong>
+              <ul>
+                {meatTotal > 0 && meatTotal < MEAT_MIN_ORDER && (
+                  <li>Meat: ${(MEAT_MIN_ORDER - meatTotal).toFixed(2)} more needed (min ${MEAT_MIN_ORDER})</li>
+                )}
+                {groceryTotal > 0 && groceryTotal < GROCERY_MIN_ORDER && (
+                  <li>Grocery: ${(GROCERY_MIN_ORDER - groceryTotal).toFixed(2)} more needed (min ${GROCERY_MIN_ORDER})</li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
+
+      {showSuccess && (
+        <SuccessModal
+          show={showSuccess}
+          message="Payment successful! Redirecting to your receipt..."
+          onClose={() => setShowSuccess(false)}
+        />
+      )}
     </div>
   )
 }
 
 export default Checkout
-

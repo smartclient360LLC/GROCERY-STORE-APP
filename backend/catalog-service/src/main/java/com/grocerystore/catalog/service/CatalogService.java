@@ -4,7 +4,6 @@ import com.grocerystore.catalog.dto.CategoryDto;
 import com.grocerystore.catalog.dto.CreateRecipeRequest;
 import com.grocerystore.catalog.dto.PriceHistoryDto;
 import com.grocerystore.catalog.dto.ProductDto;
-import com.grocerystore.catalog.dto.ProductSubstitutionDto;
 import com.grocerystore.catalog.dto.RecipeDto;
 import com.grocerystore.catalog.dto.RecipeIngredientDto;
 import com.grocerystore.catalog.dto.WishlistDto;
@@ -24,10 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -41,6 +36,7 @@ public class CatalogService {
     private final RecipeRepository recipeRepository;
     private final WishlistRepository wishlistRepository;
     private final PriceHistoryRepository priceHistoryRepository;
+    private final TheMealDbService theMealDbService;
     
     public List<ProductDto> getAllProducts() {
         // Customers only see available products (active AND in stock)
@@ -327,9 +323,40 @@ public class CatalogService {
                 .collect(Collectors.toList());
     }
     
+    /**
+     * Get all recipes from TheMealDB API
+     */
+    public List<RecipeDto> getAllRecipesFromApi() {
+        return theMealDbService.getAllRecipes();
+    }
+    
+    /**
+     * Get random recipes from TheMealDB API
+     */
+    public List<RecipeDto> getRandomRecipesFromApi(int count) {
+        return theMealDbService.getRandomRecipes(count);
+    }
+    
+    /**
+     * Search recipes from TheMealDB API
+     */
+    public List<RecipeDto> searchRecipesFromApi(String searchTerm) {
+        return theMealDbService.searchRecipes(searchTerm);
+    }
+    
+    /**
+     * Get recipe by ID from TheMealDB API
+     */
+    public RecipeDto getRecipeByIdFromApi(String id) {
+        return theMealDbService.getRecipeById(id);
+    }
+    
     public List<RecipeDto> getRecipesByCuisine(String cuisineType) {
-        return recipeRepository.findByCuisineType(cuisineType).stream()
-                .map(this::toRecipeDto)
+        // Filter API recipes by cuisine
+        List<RecipeDto> allRecipes = getAllRecipesFromApi();
+        return allRecipes.stream()
+                .filter(recipe -> recipe.getCuisineType() != null 
+                    && recipe.getCuisineType().equalsIgnoreCase(cuisineType))
                 .collect(Collectors.toList());
     }
     
@@ -571,140 +598,6 @@ public class CatalogService {
                 .price(priceHistory.getPrice())
                 .recordedAt(priceHistory.getRecordedAt())
                 .build();
-    }
-    
-    // ========== Smart Substitutions Engine ==========
-    
-    public List<ProductSubstitutionDto> findSubstitutions(Long productId, int maxResults) {
-        Product originalProduct = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-        
-        // Get all available products in the same category
-        List<Product> sameCategoryProducts = productRepository.findAvailableProductsByCategory(originalProduct.getCategory().getId())
-                .stream()
-                .filter(p -> !p.getId().equals(productId)) // Exclude the original product
-                .collect(Collectors.toList());
-        
-        // Get products from similar categories (if we want to expand beyond same category)
-        // For now, we'll focus on same category with smart matching
-        
-        List<ProductSubstitutionDto> substitutions = new ArrayList<>();
-        
-        for (Product candidate : sameCategoryProducts) {
-            double similarityScore = calculateSimilarity(originalProduct, candidate);
-            BigDecimal priceDifference = candidate.getPrice().subtract(originalProduct.getPrice());
-            String reason = generateSubstitutionReason(originalProduct, candidate, similarityScore);
-            
-            substitutions.add(ProductSubstitutionDto.builder()
-                    .product(toProductDto(candidate))
-                    .reason(reason)
-                    .priceDifference(priceDifference)
-                    .similarityScore(similarityScore)
-                    .build());
-        }
-        
-        // Sort by similarity score (highest first) and limit results
-        return substitutions.stream()
-                .sorted(Comparator.comparing(ProductSubstitutionDto::getSimilarityScore).reversed())
-                .limit(maxResults)
-                .collect(Collectors.toList());
-    }
-    
-    private double calculateSimilarity(Product original, Product candidate) {
-        double score = 0.0;
-        double maxScore = 0.0;
-        
-        // 1. Category match (40% weight) - already filtered, so full points
-        double categoryScore = 1.0;
-        score += categoryScore * 0.4;
-        maxScore += 0.4;
-        
-        // 2. Price similarity (30% weight)
-        // Products within 20% price difference get full points, decreasing to 0 at 50% difference
-        BigDecimal priceDiff = original.getPrice().subtract(candidate.getPrice()).abs();
-        BigDecimal priceDiffPercent = priceDiff.divide(original.getPrice(), 4, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100));
-        
-        double priceScore = 0.0;
-        if (priceDiffPercent.compareTo(BigDecimal.valueOf(20)) <= 0) {
-            priceScore = 1.0; // Within 20%, perfect match
-        } else if (priceDiffPercent.compareTo(BigDecimal.valueOf(50)) <= 0) {
-            // Linear decrease from 20% to 50%
-            priceScore = 1.0 - ((priceDiffPercent.doubleValue() - 20) / 30);
-        }
-        score += priceScore * 0.3;
-        maxScore += 0.3;
-        
-        // 3. Name similarity (30% weight) - simple keyword matching
-        double nameScore = calculateNameSimilarity(original.getName(), candidate.getName());
-        score += nameScore * 0.3;
-        maxScore += 0.3;
-        
-        // Normalize score to 0-1 range
-        return maxScore > 0 ? score / maxScore : 0.0;
-    }
-    
-    private double calculateNameSimilarity(String name1, String name2) {
-        if (name1 == null || name2 == null) return 0.0;
-        
-        String lower1 = name1.toLowerCase().trim();
-        String lower2 = name2.toLowerCase().trim();
-        
-        // Exact match
-        if (lower1.equals(lower2)) return 1.0;
-        
-        // Check if one contains the other
-        if (lower1.contains(lower2) || lower2.contains(lower1)) {
-            return 0.8;
-        }
-        
-        // Check for common words
-        String[] words1 = lower1.split("\\s+");
-        String[] words2 = lower2.split("\\s+");
-        
-        int commonWords = 0;
-        int totalWords = Math.max(words1.length, words2.length);
-        
-        for (String word1 : words1) {
-            for (String word2 : words2) {
-                if (word1.length() > 2 && word2.length() > 2 && word1.equals(word2)) {
-                    commonWords++;
-                    break;
-                }
-            }
-        }
-        
-        return totalWords > 0 ? (double) commonWords / totalWords : 0.0;
-    }
-    
-    private String generateSubstitutionReason(Product original, Product candidate, double similarityScore) {
-        List<String> reasons = new ArrayList<>();
-        
-        // Category match
-        reasons.add("Same category");
-        
-        // Price comparison
-        BigDecimal priceDiff = candidate.getPrice().subtract(original.getPrice());
-        if (priceDiff.compareTo(BigDecimal.ZERO) < 0) {
-            reasons.add(String.format("$%.2f cheaper", priceDiff.abs()));
-        } else if (priceDiff.compareTo(BigDecimal.ZERO) > 0) {
-            reasons.add(String.format("$%.2f more", priceDiff));
-        } else {
-            reasons.add("Same price");
-        }
-        
-        // Name similarity
-        double nameSimilarity = calculateNameSimilarity(original.getName(), candidate.getName());
-        if (nameSimilarity > 0.5) {
-            reasons.add("Similar name");
-        }
-        
-        // Stock availability
-        if (candidate.getStockQuantity() > 10) {
-            reasons.add("In stock");
-        }
-        
-        return String.join(" • ", reasons);
     }
 }
 

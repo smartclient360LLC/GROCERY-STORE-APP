@@ -38,6 +38,8 @@ public class SecurityConfig {
                 .requestMatchers("GET", "/api/catalog/products/category/*").permitAll()  // /products/category/{id}
                 .requestMatchers("GET", "/api/catalog/categories").permitAll()
                 .requestMatchers("GET", "/api/catalog/categories/*").permitAll()  // /categories/{id}
+                // Internal service endpoint for stock updates (called by order-service)
+                .requestMatchers("PUT", "/api/catalog/products/*/stock").permitAll()
                 // Admin-only endpoints - require ADMIN role
                 .requestMatchers("/api/catalog/products/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/catalog/products/*/admin").hasRole("ADMIN")

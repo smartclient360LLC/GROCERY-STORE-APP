@@ -4,7 +4,6 @@ import com.grocerystore.catalog.dto.CategoryDto;
 import com.grocerystore.catalog.dto.CreateRecipeRequest;
 import com.grocerystore.catalog.dto.PriceHistoryDto;
 import com.grocerystore.catalog.dto.ProductDto;
-import com.grocerystore.catalog.dto.ProductSubstitutionDto;
 import com.grocerystore.catalog.dto.RecipeDto;
 import com.grocerystore.catalog.dto.WishlistDto;
 import com.grocerystore.catalog.service.CatalogService;
@@ -202,13 +201,25 @@ public class CatalogController {
     
     @GetMapping("/recipes")
     public ResponseEntity<List<RecipeDto>> getAllRecipes() {
-        return ResponseEntity.ok(catalogService.getAllRecipes());
+        // Fetch from TheMealDB API instead of database
+        return ResponseEntity.ok(catalogService.getAllRecipesFromApi());
     }
     
     @GetMapping("/recipes/{id}")
-    public ResponseEntity<RecipeDto> getRecipeById(@PathVariable Long id) {
+    public ResponseEntity<RecipeDto> getRecipeById(@PathVariable String id) {
         try {
-            return ResponseEntity.ok(catalogService.getRecipeById(id));
+            // Try to get from API first (TheMealDB uses string IDs)
+            RecipeDto recipe = catalogService.getRecipeByIdFromApi(id);
+            if (recipe != null) {
+                return ResponseEntity.ok(recipe);
+            }
+            // Fallback to database if not found in API
+            try {
+                Long dbId = Long.parseLong(id);
+                return ResponseEntity.ok(catalogService.getRecipeById(dbId));
+            } catch (NumberFormatException e) {
+                return ResponseEntity.notFound().build();
+            }
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -217,6 +228,18 @@ public class CatalogController {
     @GetMapping("/recipes/cuisine/{cuisineType}")
     public ResponseEntity<List<RecipeDto>> getRecipesByCuisine(@PathVariable String cuisineType) {
         return ResponseEntity.ok(catalogService.getRecipesByCuisine(cuisineType));
+    }
+    
+    @GetMapping("/recipes/api/random")
+    public ResponseEntity<List<RecipeDto>> getRandomRecipes(
+            @RequestParam(defaultValue = "10") int count) {
+        return ResponseEntity.ok(catalogService.getRandomRecipesFromApi(count));
+    }
+    
+    @GetMapping("/recipes/api/search")
+    public ResponseEntity<List<RecipeDto>> searchRecipes(
+            @RequestParam String q) {
+        return ResponseEntity.ok(catalogService.searchRecipesFromApi(q));
     }
     
     @PostMapping("/recipes")
@@ -291,18 +314,17 @@ public class CatalogController {
         return ResponseEntity.ok(catalogService.getPriceHistory(productId));
     }
     
-    // ========== Smart Substitutions Endpoints ==========
-    
-    @GetMapping("/products/{productId}/substitutions")
-    public ResponseEntity<?> getSubstitutions(
+    // Internal endpoint for updating stock (called by order-service)
+    @PutMapping("/products/{productId}/stock")
+    public ResponseEntity<?> updateProductStock(
             @PathVariable Long productId,
-            @RequestParam(defaultValue = "5") int limit) {
+            @RequestParam Integer quantity) {
         try {
-            List<ProductSubstitutionDto> substitutions = catalogService.findSubstitutions(productId, limit);
-            return ResponseEntity.ok(substitutions);
+            catalogService.updateStock(productId, quantity);
+            return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             java.util.Map<String, String> error = new java.util.HashMap<>();
-            error.put("message", e.getMessage() != null ? e.getMessage() : "Failed to find substitutions");
+            error.put("message", e.getMessage() != null ? e.getMessage() : "Failed to update stock");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import apiClient from '../config/axios'
+import axios from 'axios'
 import { playNotificationSound } from '../utils/soundNotification'
 import './AdminDashboard.css'
 
@@ -29,7 +29,7 @@ const AdminDashboard = () => {
       console.log('Fetching products with token:', token.substring(0, 20) + '...')
       
       // Use admin endpoint to see all products including inactive
-      const response = await apiClient.get('/api/catalog/products/admin/all', {
+      const response = await axios.get('/api/catalog/products/admin/all', {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -55,7 +55,7 @@ const AdminDashboard = () => {
   const fetchCategories = async () => {
     setLoading(true)
     try {
-      const response = await apiClient.get('/api/catalog/categories')
+      const response = await axios.get('/api/catalog/categories')
       setCategories(response.data)
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -75,7 +75,7 @@ const AdminDashboard = () => {
       }
       
       const token = localStorage.getItem('token')
-      const response = await apiClient.get(url, {
+      const response = await axios.get(url, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -92,7 +92,7 @@ const AdminDashboard = () => {
       await Promise.all(
         uniqueUserIds.map(async (userId) => {
           try {
-            const userResponse = await apiClient.get(`/api/auth/users/${userId}`, {
+            const userResponse = await axios.get(`/api/auth/users/${userId}`, {
               headers: {
                 Authorization: `Bearer ${token}`
               }
@@ -170,7 +170,7 @@ const AdminDashboard = () => {
     
     try {
       const token = localStorage.getItem('token')
-      await apiClient.delete(`/api/catalog/products/${productId}`, {
+      await axios.delete(`/api/catalog/products/${productId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -216,7 +216,7 @@ const AdminDashboard = () => {
       }
     }
   }, [activeTab])
-
+  
   // Auto-refresh orders every 30 seconds
   useEffect(() => {
     if (activeTab === 'orders') {
@@ -308,10 +308,11 @@ const AdminDashboard = () => {
                   <div key={product.id} className="product-card-admin">
                     <div className="product-image-admin">
                       <img
-                        src={product.imageUrl || 'https://via.placeholder.com/200?text=No+Image'}
+                        src={product.imageUrl || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=200&h=200&fit=crop'}
                         alt={product.name}
                         onError={(e) => {
-                          e.target.src = 'https://via.placeholder.com/200?text=Image+Error'
+                          e.target.onerror = null
+                          e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ENo Image%3C/text%3E%3C/svg%3E'
                         }}
                       />
                       <div className={`availability-badge ${isAvailable ? 'available' : 'unavailable'}`}>
@@ -409,7 +410,7 @@ const AdminDashboard = () => {
                         }
                         try {
                           const token = localStorage.getItem('token')
-                          await apiClient.delete(`/api/catalog/categories/${category.id}`, {
+                          await axios.delete(`/api/catalog/categories/${category.id}`, {
                             headers: {
                               Authorization: `Bearer ${token}`
                             }

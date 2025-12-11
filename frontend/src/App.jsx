@@ -15,6 +15,9 @@ import OrderReceipt from './pages/OrderReceipt'
 import RecipeList from './pages/RecipeList'
 import RecipeDetails from './pages/RecipeDetails'
 import Wishlist from './pages/Wishlist'
+import ScheduledOrders from './pages/ScheduledOrders'
+import CreateScheduledOrder from './pages/CreateScheduledOrder'
+import CarbonFootprint from './pages/CarbonFootprint'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminOrderDetails from './pages/AdminOrderDetails'
 import AdminProductManagement from './pages/AdminProductManagement'
@@ -61,6 +64,30 @@ function App() {
               element={
                 <ProtectedRoute>
                   <OrderHistory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/scheduled-orders"
+              element={
+                <ProtectedRoute>
+                  <ScheduledOrders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/scheduled-orders/create"
+              element={
+                <ProtectedRoute>
+                  <CreateScheduledOrder />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/carbon-footprint"
+              element={
+                <ProtectedRoute>
+                  <CarbonFootprint />
                 </ProtectedRoute>
               }
             />

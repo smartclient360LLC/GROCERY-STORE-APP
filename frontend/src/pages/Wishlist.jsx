@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import apiClient from '../config/axios'
+import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -25,7 +25,7 @@ const Wishlist = () => {
 
   const fetchWishlist = async () => {
     try {
-      const response = await apiClient.get(`/api/catalog/wishlist/${user.userId}`)
+      const response = await axios.get(`/api/catalog/wishlist/${user.userId}`)
       setWishlist(response.data)
     } catch (error) {
       console.error('Error fetching wishlist:', error)
@@ -36,7 +36,7 @@ const Wishlist = () => {
 
   const removeFromWishlist = async (productId) => {
     try {
-      await apiClient.delete(`/api/catalog/wishlist/${user.userId}/products/${productId}`)
+      await axios.delete(`/api/catalog/wishlist/${user.userId}/products/${productId}`)
       setWishlist(wishlist.filter(item => item.productId !== productId))
       setSuccessMessage('Removed from wishlist')
       setShowSuccess(true)
@@ -56,9 +56,15 @@ const Wishlist = () => {
         quantity: 1
       }
       
-      await apiClient.post(`/api/cart/${user.userId}/items`, null, { params })
+      // Add to cart
+      await axios.post(`/api/cart/${user.userId}/items`, null, { params })
       refreshCart()
-      setSuccessMessage(`${item.productName} added to cart!`)
+      
+      // Remove from wishlist
+      await axios.delete(`/api/catalog/wishlist/${user.userId}/products/${item.productId}`)
+      setWishlist(wishlist.filter(wishlistItem => wishlistItem.productId !== item.productId))
+      
+      setSuccessMessage(`${item.productName} added to cart and removed from wishlist!`)
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 2000)
     } catch (error) {
@@ -74,7 +80,7 @@ const Wishlist = () => {
       if (notifyWhenInStock !== undefined) params.notifyWhenInStock = notifyWhenInStock
       if (targetPrice !== undefined) params.targetPrice = targetPrice
       
-      await apiClient.put(`/api/catalog/wishlist/${user.userId}/products/${productId}`, null, { params })
+      await axios.put(`/api/catalog/wishlist/${user.userId}/products/${productId}`, null, { params })
       fetchWishlist() // Refresh to get updated data
     } catch (error) {
       console.error('Error updating notification settings:', error)
@@ -102,7 +108,7 @@ const Wishlist = () => {
             <div key={item.id} className="wishlist-item">
               <div className="wishlist-item-image">
                 <img
-                  src={item.productImageUrl || 'https://via.placeholder.com/200'}
+                  src={item.productImageUrl || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=200&h=200&fit=crop'}
                   alt={item.productName}
                   onClick={() => navigate(`/products/${item.productId}`)}
                   onError={(e) => {

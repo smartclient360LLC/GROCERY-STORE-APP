@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import apiClient from '../config/axios'
+import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import SuccessModal from '../components/SuccessModal'
@@ -23,7 +23,7 @@ const RecipeDetails = () => {
 
   const fetchRecipe = async () => {
     try {
-      const response = await apiClient.get(`/api/catalog/recipes/${id}`)
+      const response = await axios.get(`/api/catalog/recipes/${id}`)
       setRecipe(response.data)
     } catch (error) {
       console.error('Error fetching recipe:', error)
@@ -67,7 +67,7 @@ const RecipeDetails = () => {
           let price = ingredient.currentPrice
           if (!price) {
             try {
-              const productResponse = await apiClient.get(`/api/catalog/products/${ingredient.productId}`)
+              const productResponse = await axios.get(`/api/catalog/products/${ingredient.productId}`)
               price = productResponse.data.price
             } catch (error) {
               console.error(`Error fetching product ${ingredient.productId}:`, error)
@@ -76,7 +76,7 @@ const RecipeDetails = () => {
             }
           }
 
-          await apiClient.post(`/api/cart/${user.userId}/items`, null, {
+          await axios.post(`/api/cart/${user.userId}/items`, null, {
             params: {
               productId: ingredient.productId,
               productName: ingredient.productName,
@@ -138,17 +138,16 @@ const RecipeDetails = () => {
 
       <div className="recipe-details-content">
         <div className="recipe-main">
-          {recipe.imageUrl && (
-            <div className="recipe-image-large">
-              <img
-                src={recipe.imageUrl}
-                alt={recipe.name}
-                onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/600?text=Recipe'
-                }}
-              />
-            </div>
-          )}
+          <div className="recipe-image-large">
+            <img
+              src={recipe.imageUrl || 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600&h=400&fit=crop'}
+              alt={recipe.name}
+              onError={(e) => {
+                e.target.onerror = null
+                e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="600" height="400"%3E%3Crect fill="%23ddd" width="600" height="400"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="30" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ERecipe Image%3C/text%3E%3C/svg%3E'
+              }}
+            />
+          </div>
 
           <div className="recipe-header-details">
             <h1>{recipe.name}</h1>

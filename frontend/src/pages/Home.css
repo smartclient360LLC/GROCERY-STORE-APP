@@ -5,10 +5,11 @@
 .hero {
   background: linear-gradient(135deg, #FF6B35 0%, #F7931E 50%, #FFD700 100%);
   color: white;
-  padding: 5rem 0;
+  padding: 6rem 0;
   text-align: center;
   position: relative;
   overflow: hidden;
+  margin-bottom: 4rem;
 }
 
 .hero::before {
@@ -20,16 +21,92 @@
   bottom: 0;
   background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
   opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -50px;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(to bottom, transparent, var(--bg-secondary));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero .container {
+  position: relative;
+  z-index: 1;
 }
 
 .hero h1 {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  font-size: 3.5rem;
+  font-weight: 900;
+  margin-bottom: 1.5rem;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  letter-spacing: -1px;
 }
 
 .hero p {
   font-size: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0.95;
+  font-weight: 400;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-btn {
+  text-decoration: none;
+  display: inline-block;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-btn-primary {
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+}
+
+.hero-btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.5);
+}
+
+.hero-btn-secondary {
+  background: white;
+  color: #FF6B35;
+  border: 2px solid #FF6B35;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+.hero-btn-secondary:hover {
+  background: #FF6B35;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
 }
 
 .features {
@@ -56,9 +133,10 @@
 }
 
 .buy-again-section h2 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  color: #FF6B35;
+  font-size: var(--font-size-3xl);
+  margin-bottom: var(--spacing-sm);
+  color: var(--primary-color);
+  font-weight: 800;
 }
 
 .section-subtitle {
@@ -70,26 +148,44 @@
 .buy-again-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 3rem;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-2xl);
 }
 
 .buy-again-card {
-  background: white;
-  border: 2px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 1.5rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: all 0.3s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.buy-again-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  transform: scaleX(0);
+  transition: transform var(--transition-base);
 }
 
 .buy-again-card:hover {
-  border-color: #FF6B35;
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
-  transform: translateY(-2px);
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-6px);
+}
+
+.buy-again-card:hover::before {
+  transform: scaleX(1);
 }
 
 .buy-again-info h3 {
@@ -112,10 +208,10 @@
 }
 
 .buy-again-price {
-  font-size: 1.3rem;
-  font-weight: bold;
-  color: #FF6B35;
-  margin: 0.75rem 0;
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  color: var(--primary-color);
+  margin: var(--spacing-md) 0;
 }
 
 .buy-again-card .btn {
