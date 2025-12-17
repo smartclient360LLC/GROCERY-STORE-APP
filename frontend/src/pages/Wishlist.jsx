@@ -3,17 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
-import SuccessModal from '../components/SuccessModal'
+import Toast from '../components/Toast'
+import { useToast } from '../hooks/useToast'
 import './Wishlist.css'
 
 const Wishlist = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { refreshCart } = useCart()
+  const { toast, showSuccess, showError, hideToast } = useToast()
   const [wishlist, setWishlist] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
     if (user) {
@@ -38,12 +38,10 @@ const Wishlist = () => {
     try {
       await axios.delete(`/api/catalog/wishlist/${user.userId}/products/${productId}`)
       setWishlist(wishlist.filter(item => item.productId !== productId))
-      setSuccessMessage('Removed from wishlist')
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 2000)
+      showSuccess('Removed from wishlist')
     } catch (error) {
       console.error('Error removing from wishlist:', error)
-      alert('Failed to remove from wishlist')
+      showError('Failed to remove from wishlist')
     }
   }
 
@@ -64,12 +62,10 @@ const Wishlist = () => {
       await axios.delete(`/api/catalog/wishlist/${user.userId}/products/${item.productId}`)
       setWishlist(wishlist.filter(wishlistItem => wishlistItem.productId !== item.productId))
       
-      setSuccessMessage(`${item.productName} added to cart and removed from wishlist!`)
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 2000)
+      showSuccess(`${item.productName} added to cart and removed from wishlist!`)
     } catch (error) {
       console.error('Error adding to cart:', error)
-      alert('Failed to add product to cart')
+      showError('Failed to add product to cart')
     }
   }
 
@@ -82,9 +78,10 @@ const Wishlist = () => {
       
       await axios.put(`/api/catalog/wishlist/${user.userId}/products/${productId}`, null, { params })
       fetchWishlist() // Refresh to get updated data
+      showSuccess('Notification settings updated')
     } catch (error) {
       console.error('Error updating notification settings:', error)
-      alert('Failed to update notification settings')
+      showError('Failed to update notification settings')
     }
   }
 
@@ -195,10 +192,12 @@ const Wishlist = () => {
           ))}
         </div>
       )}
-      <SuccessModal
-        show={showSuccess}
-        message={successMessage}
-        onClose={() => setShowSuccess(false)}
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={hideToast}
+        duration={toast.duration || 3000}
       />
     </div>
   )

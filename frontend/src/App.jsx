@@ -1,13 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
+import Layout from './components/Layout'
 import Home from './pages/Home'
 import ProductList from './pages/ProductList'
 import ProductDetails from './pages/ProductDetails'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
+import Auth from './pages/Auth'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import OrderHistory from './pages/OrderHistory'
@@ -33,16 +33,16 @@ function App() {
       <CartProvider>
         <Router>
           <div className="App">
-            <Navbar />
-            <Routes>
-            <Route path="/" element={<Home />} />
+            <Layout>
+              <Routes>
+              <Route path="/" element={<Home />} />
             <Route path="/products" element={<ProductList />} />
             <Route path="/products/:id" element={<ProductDetails />} />
             <Route path="/recipes" element={<RecipeList />} />
             <Route path="/recipes/:id" element={<RecipeDetails />} />
             <Route path="/cart" element={<Cart />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/register" element={<Auth />} />
             <Route
               path="/checkout"
               element={
@@ -163,8 +163,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            </Routes>
-            <Footer />
+              </Routes>
+            </Layout>
           </div>
         </Router>
       </CartProvider>

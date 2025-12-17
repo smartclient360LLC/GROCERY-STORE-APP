@@ -64,3 +64,7 @@ coverage/
 
 # Documentation files (not pushed to repository)
 *.md
+
+# Payment Service Environment Files
+backend/payment-service/.env
+backend/payment-service/.env.local

@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
-import SuccessModal from '../components/SuccessModal'
+import Toast from '../components/Toast'
+import { useToast } from '../hooks/useToast'
 import './ProductDetails.css'
 
 const ProductDetails = () => {
@@ -11,12 +12,11 @@ const ProductDetails = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { refreshCart } = useCart()
+  const { toast, showSuccess, showError, hideToast } = useToast()
   const [product, setProduct] = useState(null)
   const [quantity, setQuantity] = useState(1)
   const [weight, setWeight] = useState(1.0) // Weight in pounds
   const [loading, setLoading] = useState(true)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [wishlistId, setWishlistId] = useState(null)
   const [showFamilyListModal, setShowFamilyListModal] = useState(false)
@@ -112,17 +112,15 @@ const ProductDetails = () => {
         await axios.delete(`/api/catalog/wishlist/${user.userId}/products/${id}`)
         setIsInWishlist(false)
         setWishlistId(null)
-        setSuccessMessage('Removed from wishlist')
+        showSuccess('Removed from wishlist')
       } else {
         await axios.post(`/api/catalog/wishlist/${user.userId}/products/${id}`)
         setIsInWishlist(true)
-        setSuccessMessage('Added to wishlist')
+        showSuccess('Added to wishlist')
       }
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 2000)
     } catch (error) {
       console.error('Error toggling wishlist:', error)
-      alert('Failed to update wishlist')
+      showError('Failed to update wishlist')
     }
   }
 
@@ -147,14 +145,12 @@ const ProductDetails = () => {
         requestBody
       )
 
-      setSuccessMessage(`Added to family list!`)
-      setShowSuccess(true)
+      showSuccess('Added to family list!')
       setShowFamilyListModal(false)
       setSelectedListId(null)
-      setTimeout(() => setShowSuccess(false), 2000)
     } catch (error) {
       console.error('Error adding to family list:', error)
-      alert(error.response?.data?.message || 'Failed to add to family list')
+      showError(error.response?.data?.message || 'Failed to add to family list')
     } finally {
       setAddingToList(false)
     }
@@ -199,14 +195,12 @@ const ProductDetails = () => {
       
       await axios.post(`/api/cart/${user.userId}/items`, null, { params })
       refreshCart()
-      setSuccessMessage(isWeightBased() 
-        ? `${parseFloat(weight).toFixed(2)} lbs of ${product?.name} added to cart successfully!`
-        : `${quantity} x ${product?.name} added to cart successfully!`)
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 2000)
+      showSuccess(isWeightBased() 
+        ? `${parseFloat(weight).toFixed(2)} lbs of ${product?.name} added to cart!`
+        : `${quantity} x ${product?.name} added to cart!`)
     } catch (error) {
       console.error('Error adding to cart:', error)
-      alert('Failed to add product to cart')
+      showError('Failed to add product to cart')
     }
   }
 
@@ -354,10 +348,12 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
-      <SuccessModal
-        show={showSuccess}
-        message={successMessage}
-        onClose={() => setShowSuccess(false)}
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={hideToast}
+        duration={toast.duration || 3000}
       />
 
       {showFamilyListModal && (

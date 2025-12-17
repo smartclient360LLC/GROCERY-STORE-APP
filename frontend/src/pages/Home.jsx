@@ -3,17 +3,17 @@ import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
-import SuccessModal from '../components/SuccessModal'
+import Toast from '../components/Toast'
+import { useToast } from '../hooks/useToast'
 import './Home.css'
 
 const Home = () => {
   const { user } = useAuth()
   const { refreshCart } = useCart()
   const navigate = useNavigate()
+  const { toast, showSuccess, showError, hideToast } = useToast()
   const [frequentlyOrdered, setFrequentlyOrdered] = useState([])
   const [loading, setLoading] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
     if (user && user.userId) {
@@ -52,12 +52,10 @@ const Home = () => {
       })
       
       refreshCart()
-      setSuccessMessage(`${product.productName} added to cart!`)
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 2000)
+      showSuccess(`${product.productName} added to cart!`)
     } catch (error) {
       console.error('Error adding to cart:', error)
-      alert('Failed to add item to cart')
+      showError('Failed to add item to cart')
     } finally {
       setLoading(false)
     }
@@ -85,8 +83,12 @@ const Home = () => {
             <h2>🛒 Buy Again</h2>
             <p className="section-subtitle">Your frequently ordered items</p>
             <div className="buy-again-grid">
-              {frequentlyOrdered.map(product => (
-                <div key={product.productId} className="buy-again-card">
+              {frequentlyOrdered.map((product, index) => (
+                <div 
+                  key={product.productId} 
+                  className="buy-again-card"
+                  style={{ '--card-index': index }}
+                >
                   <div className="buy-again-info">
                     <h3>{product.productName}</h3>
                     <p className="buy-again-stats">
@@ -124,13 +126,13 @@ const Home = () => {
           </div>
         </div>
       </div>
-      {showSuccess && (
-        <SuccessModal
-          show={showSuccess}
-          message={successMessage}
-          onClose={() => setShowSuccess(false)}
-        />
-      )}
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={hideToast}
+        duration={toast.duration || 3000}
+      />
     </div>
   )
 }
