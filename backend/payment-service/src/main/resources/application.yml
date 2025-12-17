@@ -30,11 +30,18 @@ spring:
 stripe:
   # REQUIRED: Stripe secret key from environment variable
   # Must be a valid Stripe test or live key (starts with sk_test_ or sk_live_)
-  # Set STRIPE_SECRET_KEY environment variable in IntelliJ run configuration
+  # Set STRIPE_SECRET_KEY environment variable in IntelliJ run configuration or .env file
   # Get keys from: https://dashboard.stripe.com/test/apikeys
-  STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-STRIPE_PUBLIC_KEY=pk_test_your_stripe_public_key
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+  secret-key: ${STRIPE_SECRET_KEY:REQUIRED_SET_STRIPE_SECRET_KEY}
+  
+  # REQUIRED: Stripe public key from environment variable
+  # Must be a valid Stripe test or live key (starts with pk_test_ or pk_live_)
+  # Set STRIPE_PUBLIC_KEY environment variable in IntelliJ run configuration or .env file
+  # Get keys from: https://dashboard.stripe.com/test/apikeys
+  public-key: ${STRIPE_PUBLIC_KEY:REQUIRED_SET_STRIPE_PUBLIC_KEY}
+  
+  # Optional: Stripe webhook secret for webhook signature verification
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
 
 logging:
   level:
