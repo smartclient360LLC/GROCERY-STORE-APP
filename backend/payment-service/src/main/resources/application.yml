@@ -1,5 +1,5 @@
 server:
-  port: 8086
+  port: 8085
 
 spring:
   application:
@@ -28,9 +28,13 @@ spring:
     password: ${RABBITMQ_PASSWORD:guest}
 
 stripe:
-  secret-key: ${STRIPE_SECRET_KEY}
-  public-key: ${STRIPE_PUBLIC_KEY}
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret}
+  # REQUIRED: Stripe secret key from environment variable
+  # Must be a valid Stripe test or live key (starts with sk_test_ or sk_live_)
+  # Set STRIPE_SECRET_KEY environment variable in IntelliJ run configuration
+  # Get keys from: https://dashboard.stripe.com/test/apikeys
+  STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_PUBLIC_KEY=pk_test_your_stripe_public_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 
 logging:
   level:

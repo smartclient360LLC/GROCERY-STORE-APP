@@ -61,3 +61,6 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+
+# Documentation files (not pushed to repository)
+*.md

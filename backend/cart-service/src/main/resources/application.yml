@@ -29,7 +29,7 @@ spring:
 
 catalog:
   service:
-    url: http://catalog-service:8082
+    url: ${CATALOG_SERVICE_URL:http://localhost:8082}
 
 logging:
   level:

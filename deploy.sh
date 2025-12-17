@@ -87,7 +87,7 @@ done
 echo ""
 echo -e "${BLUE}==========================================${NC}"
 if [ ${#FAILED_SERVICES[@]} -eq 0 ]; then
-    echo -e "${GREEN}✅ All services deployed to ECR!${NC}"
+echo -e "${GREEN}✅ All services deployed to ECR!${NC}"
 else
     echo -e "${YELLOW}⚠ Some services failed to push:${NC}"
     for service in "${FAILED_SERVICES[@]}"; do

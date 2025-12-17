@@ -24,7 +24,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5443:5432"
     volumes:
       - postgres-catalog-data:/var/lib/postgresql/data
     networks:
@@ -188,9 +188,11 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: guest
       RABBITMQ_PASSWORD: guest
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_your_stripe_secret_key}
-      STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY:-pk_test_your_stripe_public_key}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_your_webhook_secret}
+      # REQUIRED: Stripe keys must be provided via .env file or environment
+      # No default values - service will fail fast if not set
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
     depends_on:
       - postgres-payment
       - rabbitmq
